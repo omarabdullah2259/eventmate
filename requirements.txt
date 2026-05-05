@@ -3,3 +3,4 @@ Authlib==1.2.1
 Werkzeug==2.3.7
 python-dotenv==1.0.0
 Flask-SQLAlchemy
+gunicorn
