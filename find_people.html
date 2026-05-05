@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find People - {{ event.title }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .event-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            padding: 1rem;
+        }
+        .event-card h2 {
+            margin-top: 0;
+        }
+        .attendees-section {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem;
+        }
+        .attendees-section h3 {
+            margin-top: 0;
+        }
+        .attendee {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        .attendee:last-child {
+            border-bottom: none;
+        }
+        .back-btn {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 1rem;
+        }
+        .back-btn:hover {
+            background-color: #5a6268;
+        }
+        .join-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        .join-btn:hover {
+            background-color: #218838;
+        }
+        .join-btn.joined {
+            background-color: #2563eb;
+            cursor: default;
+            opacity: 0.85;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>EventMate - Find People</h1>
+    </header>
+    <div class="container">
+        <div class="event-card">
+            <h2>{{ event.title }}</h2>
+            <p><strong>Date:</strong> {{ event.date }}</p>
+            <p><strong>Location:</strong> {{ event.location }}</p>
+            <p><strong>Language:</strong> {{ event.language }}</p>
+            <p><strong>Category:</strong> {{ event.category }}</p>
+        </div>
+        <div class="attendees-section">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem;">
+                <h3>People Interested{% if not guest %} ({{ attendees|length }}){% endif %}</h3>
+                {% if guest %}
+                    <span class="join-btn joined" style="cursor: default;">Guest privacy mode</span>
+                {% elif joined %}
+                    <button class="join-btn joined" disabled>Joined</button>
+                {% else %}
+                    <a class="join-btn" href="/join/{{ event.id }}">Join Event</a>
+                {% endif %}
+            </div>
+            {% if guest %}
+                <p>Attendee names are hidden for guest users. Log in to see who's attending.</p>
+            {% else %}
+                {% if attendees %}
+                    {% for attendee in attendees %}
+                    <div class="attendee">{{ attendee }}</div>
+                    {% endfor %}
+                {% else %}
+                    <p>No one has joined yet. Be the first!</p>
+                {% endif %}
+            {% endif %}
+        </div>
+        <a href="/" class="back-btn">Back to Events</a>
+    </div>
+</body>
+</html>

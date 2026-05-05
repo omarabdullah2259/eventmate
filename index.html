@@ -1,0 +1,241 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventMate</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: rgba(255,255,255,0.08);
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #60a5fa;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Inter, system-ui, sans-serif;
+            background: radial-gradient(circle at top left, rgba(96,165,250,0.18), transparent 18%), linear-gradient(180deg, #020617 0%, #0f172a 100%);
+            color: var(--text);
+        }
+        .page-shell {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 1.6rem;
+        }
+        .topbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .brand-title {
+            margin: 0;
+            font-size: clamp(1.9rem, 3vw, 2.8rem);
+        }
+        .brand-subtitle {
+            margin: 0.6rem 0 0;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            border-radius: 999px;
+            padding: 0.9rem 1rem;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(148,163,184,0.16);
+        }
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: #2563eb;
+            font-weight: 700;
+            color: white;
+        }
+        .hero {
+            border-radius: 28px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(148,163,184,0.14);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 24px 70px rgba(15,23,42,0.32);
+        }
+        .hero p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.75;
+        }
+        .events-grid {
+            display: grid;
+            gap: 1.2rem;
+        }
+        .event-card {
+            background: rgba(15,23,42,0.92);
+            border: 1px solid rgba(148,163,184,0.12);
+            border-radius: 28px;
+            padding: 1.6rem;
+            display: grid;
+            gap: 1rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .event-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 24px 70px rgba(15,23,42,0.30);
+        }
+        .event-card h3 {
+            margin: 0;
+            font-size: 1.35rem;
+        }
+        .event-meta {
+            display: grid;
+            gap: 0.7rem;
+        }
+        .pill {
+            display: inline-flex;
+            gap: 0.55rem;
+            align-items: center;
+            padding: 0.65rem 0.95rem;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+        .pill strong { color: var(--text); }
+        .event-footer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+        }
+        .event-button,
+        .logout-button {
+            border: none;
+            border-radius: 16px;
+            padding: 0.95rem 1.4rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .event-button {
+            color: white;
+            background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+        }
+        .event-button:hover { background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%); }
+        .logout-button {
+            background: rgba(255,255,255,0.08);
+            color: var(--text);
+            border: 1px solid rgba(148,163,184,0.14);
+        }
+        .logout-button:hover { background: rgba(255,255,255,0.12); }
+        @media (max-width: 720px) { .event-footer { flex-direction: column; align-items: stretch; } }
+    </style>
+</head>
+<body>
+    <main class="page-shell">
+        <section class="topbar">
+            <div>
+                <h1 class="brand-title">EventMate</h1>
+                <p class="brand-subtitle">Browse curated local events and connect with international newcomers around Germany.</p>
+            </div>
+            <div class="user-chip">
+                {% if guest %}
+                <span class="avatar">G</span>
+                <div>
+                    <p style="margin:0;font-weight:700;">Guest browsing</p>
+                    <p style="margin:0;color:var(--muted);font-size:0.95rem;">Attendee privacy enabled</p>
+                </div>
+                {% else %}
+                <span class="avatar">{{ user.name[0] if user.name else 'U' }}</span>
+                <div>
+                    <p style="margin:0;font-weight:700;">{{ user.name }}</p>
+                    {% if user.email %}
+                    <p style="margin:0;color:var(--muted);font-size:0.95rem;">{{ user.email }}</p>
+                    {% elif user.state %}
+                    <p style="margin:0;color:var(--muted);font-size:0.95rem;">{% if user.city %}{{ user.city }}, {% endif %}{{ user.street }} {{ user.house_number }}, {{ user.state }}</p>
+                    {% else %}
+                    <p style="margin:0;color:var(--muted);font-size:0.95rem;">Signed in with Google</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <a class="logout-button" href="/logout">Logout</a>
+            </div>
+        </section>
+        <section class="hero">
+            <p>Welcome to EventMate — a modern login-first event hub for international students and non-native German speakers. Use Google to keep your event discovery secure and personal.</p>
+        </section>
+        <section class="state-selector" style="border-radius: 28px; background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.14); padding: 2rem; margin-bottom: 2rem; box-shadow: 0 24px 70px rgba(15,23,42,0.32);">
+            <h2 style="margin:0 0 1rem; color: var(--text);">Explore by State</h2>
+            <select id="stateSelect" style="width: 100%; border:1px solid rgba(148,163,184,0.2); border-radius:14px; padding:0.95rem 1rem; background:rgba(255,255,255,0.08); color:var(--text); font-size:1rem;">
+                <option value="">Select German State</option>
+                <option value="North Rhine-Westphalia">North Rhine-Westphalia</option>
+            </select>
+            <div id="placesDiv" style="display:none; margin-top:1rem;">
+                <h3 style="color: var(--text); margin:0 0 1rem;">Places in North Rhine-Westphalia</h3>
+                <ul style="list-style:none; padding:0; display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:0.5rem; color: var(--text);">
+                    <li>Bonn</li>
+                    <li>Cologne</li>
+                    <li>Düsseldorf</li>
+                    <li>Dortmund</li>
+                    <li>Essen</li>
+                    <li>Recklinghausen</li>
+                    <li>Gelsenkirchen</li>
+                    <li>Duisburg</li>
+                    <li>Bochum</li>
+                    <li>Wuppertal</li>
+                    <li>Bielefeld</li>
+                    <li>Münster</li>
+                </ul>
+            </div>
+        </section>
+        <section class="events-grid">
+            {% for event in events %}
+            <article class="event-card">
+                <div>
+                    <h3>{{ event.title }}</h3>
+                    <div class="event-meta">
+                        <span class="pill"><strong>Date:</strong> {{ event.date }}</span>
+                        <span class="pill"><strong>Location:</strong> {{ event.location }}</span>
+                        <span class="pill"><strong>Language:</strong> {{ event.language }}</span>
+                        <span class="pill"><strong>Category:</strong> {{ event.category }}</span>
+                    </div>
+                </div>
+                <div class="event-footer">
+                    <a class="event-button" href="/find_people/{{ event.id }}">Find People</a>
+                    {% if guest %}
+                        <span class="pill" style="background: rgba(255,255,255,0.08); color: var(--text);">Guest view</span>
+                    {% elif event.id in joined_events %}
+                        <span class="pill" style="background: rgba(34,197,94,0.14); color: #bbf7d0;">Joined</span>
+                    {% else %}
+                        <a class="event-button" href="/join/{{ event.id }}" style="background: linear-gradient(135deg, #16a34a 0%, #4ade80 100%);">Join Event</a>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </section>
+    </main>
+    <script>
+        document.getElementById('stateSelect').addEventListener('change', function() {
+            var placesDiv = document.getElementById('placesDiv');
+            if (this.value === 'North Rhine-Westphalia') {
+                placesDiv.style.display = 'block';
+            } else {
+                placesDiv.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
