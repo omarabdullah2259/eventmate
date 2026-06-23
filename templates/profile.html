@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}{{ profile_user.name }} — EventMate{% endblock %}
+{% block head %}
+<style>
+    .profile-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; align-items: start; }
+    @media (max-width: 700px) { .profile-layout { grid-template-columns: 1fr; } }
+
+    .profile-card { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 1.5rem; display: grid; gap: 1.2rem; }
+    .profile-avatar-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+    .profile-avatar {
+        width: 96px; height: 96px; border-radius: 50%;
+        background: var(--accent-dark); display: grid; place-items: center;
+        font-size: 2rem; font-weight: 800; color: #fff;
+        overflow: hidden; border: 3px solid rgba(96,165,250,0.3);
+    }
+    .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-name { font-size: 1.2rem; font-weight: 800; text-align: center; }
+    .profile-username { color: var(--muted); font-size: 0.88rem; text-align: center; }
+    .profile-detail { display: flex; flex-direction: column; gap: 0.5rem; }
+    .profile-detail-row { display: flex; gap: 0.5rem; align-items: flex-start; }
+    .profile-detail-icon { color: var(--muted); width: 18px; flex-shrink: 0; }
+    .profile-detail-text { font-size: 0.88rem; color: var(--muted); }
+    .profile-detail-text strong { color: var(--text); }
+    .tags-wrap { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+    .main-col { display: grid; gap: 1.5rem; }
+    .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 1.5rem; }
+    .section-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 0.75rem; }
+    .about-text { color: var(--muted); line-height: 1.75; font-size: 0.92rem; }
+    .event-list { display: grid; gap: 0.6rem; }
+    .event-list-item {
+        display: flex; align-items: center; gap: 0.75rem;
+        text-decoration: none; color: var(--text);
+        padding: 0.7rem 0.9rem; border-radius: 13px;
+        background: var(--surface2); transition: background .15s;
+    }
+    .event-list-item:hover { background: rgba(96,165,250,.12); }
+    .event-list-icon { width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; overflow: hidden; }
+    .event-list-icon > div { width: 100%; height: 100%; display: grid; place-items: center; font-size: 1.1rem; }
+    .event-list-title { font-size: 0.9rem; font-weight: 600; }
+    .event-list-meta { font-size: 0.78rem; color: var(--muted); }
+    .empty-state-sm { color: var(--muted); font-size: 0.88rem; padding: 0.5rem 0; }
+</style>
+{% endblock %}
+{% block body %}
+<div class="page">
+    <div style="margin-bottom:1.5rem;">
+        <a href="/" style="color:var(--muted);text-decoration:none;font-size:0.9rem;">← Back to events</a>
+    </div>
+
+    <div class="profile-layout">
+        <div class="profile-card">
+            <div class="profile-avatar-wrap">
+                <div class="profile-avatar">
+                    {% if profile_user.profile_picture %}
+                        <img src="{{ url_for('static', filename='uploads/' + profile_user.profile_picture) }}" alt="">
+                    {% else %}
+                        {{ profile_user.name[0] | upper }}
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="profile-name">{{ profile_user.name }}</div>
+                    {% if profile_user.username %}
+                    <div class="profile-username">@{{ profile_user.username }}</div>
+                    {% endif %}
+                </div>
+                {% if is_own %}
+                    <a href="/profile/edit" class="btn btn-ghost btn-sm">✏️ Edit Profile</a>
+                {% endif %}
+            </div>
+
+            <div class="profile-detail">
+                {% if profile_user.university %}
+                <div class="profile-detail-row">
+                    <span class="profile-detail-icon">🎓</span>
+                    <div class="profile-detail-text"><strong>{{ profile_user.university }}</strong></div>
+                </div>
+                {% endif %}
+                {% if profile_user.study_program %}
+                <div class="profile-detail-row">
+                    <span class="profile-detail-icon">📚</span>
+                    <div class="profile-detail-text">{{ profile_user.study_program }}</div>
+                </div>
+                {% endif %}
+                {% if profile_user.city or profile_user.state %}
+                <div class="profile-detail-row">
+                    <span class="profile-detail-icon">📍</span>
+                    <div class="profile-detail-text">{% if profile_user.city %}{{ profile_user.city }}, {% endif %}{{ profile_user.state }}</div>
+                </div>
+                {% endif %}
+                {% if profile_user.auth_method %}
+                <div class="profile-detail-row">
+                    <span class="profile-detail-icon">🔐</span>
+                    <div class="profile-detail-text">{{ profile_user.auth_method | capitalize }} account</div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if profile_user.languages %}
+            <div>
+                <div class="section-label">Languages</div>
+                <div class="tags-wrap">
+                    {% for lang in profile_user.languages %}
+                        <span class="tag tag-blue">{{ lang }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if profile_user.interests %}
+            <div>
+                <div class="section-label">Interests</div>
+                <div class="tags-wrap">
+                    {% for interest in profile_user.interests %}
+                        <span class="tag tag-purple">{{ interest }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="main-col">
+            {% if profile_user.about_me %}
+            <div class="section-card">
+                <div class="section-label">About</div>
+                <p class="about-text">{{ profile_user.about_me }}</p>
+            </div>
+            {% elif is_own %}
+            <div class="section-card" style="text-align:center;padding:2rem;">
+                <p style="color:var(--muted);margin-bottom:1rem;">Complete your profile to help others connect with you.</p>
+                <a href="/profile/edit" class="btn btn-primary btn-sm">Complete profile</a>
+            </div>
+            {% endif %}
+
+            <div class="section-card">
+                <div class="section-label">Events Joined ({{ joined_events|length }})</div>
+                {% if joined_events %}
+                <div class="event-list">
+                    {% for event in joined_events %}
+                    <a href="/event/{{ event.id }}" class="event-list-item">
+                        <div class="event-list-icon">
+                            {% if event.banner %}
+                                <img src="{{ url_for('static', filename='uploads/' + event.banner) }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                            {% else %}
+                                <div style="background:{{ event.category_color }};width:100%;height:100%;display:grid;place-items:center;font-size:1rem;">{{ event.category_icon }}</div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="event-list-title">{{ event.title }}</div>
+                            <div class="event-list-meta">{{ event.date }} · {{ event.location }}</div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="empty-state-sm">No events joined yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

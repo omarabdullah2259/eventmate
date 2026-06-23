@@ -1,241 +1,218 @@
-﻿<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EventMate</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-    <style>
-        :root {
-            --bg: #0f172a;
-            --surface: rgba(255,255,255,0.08);
-            --text: #e2e8f0;
-            --muted: #94a3b8;
-            --accent: #60a5fa;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            min-height: 100vh;
-            font-family: Inter, system-ui, sans-serif;
-            background: radial-gradient(circle at top left, rgba(96,165,250,0.18), transparent 18%), linear-gradient(180deg, #020617 0%, #0f172a 100%);
-            color: var(--text);
-        }
-        .page-shell {
-            max-width: 980px;
-            margin: 0 auto;
-            padding: 1.6rem;
-        }
-        .topbar {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            gap: 1rem;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-        .brand-title {
-            margin: 0;
-            font-size: clamp(1.9rem, 3vw, 2.8rem);
-        }
-        .brand-subtitle {
-            margin: 0.6rem 0 0;
-            color: var(--muted);
-            line-height: 1.7;
-        }
-        .user-chip {
-            display: flex;
-            align-items: center;
-            gap: 0.9rem;
-            border-radius: 999px;
-            padding: 0.9rem 1rem;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(148,163,184,0.16);
-        }
-        .avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            background: #2563eb;
-            font-weight: 700;
-            color: white;
-        }
-        .hero {
-            border-radius: 28px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(148,163,184,0.14);
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 24px 70px rgba(15,23,42,0.32);
-        }
-        .hero p {
-            margin: 0;
-            color: var(--muted);
-            line-height: 1.75;
-        }
-        .events-grid {
-            display: grid;
-            gap: 1.2rem;
-        }
-        .event-card {
-            background: rgba(15,23,42,0.92);
-            border: 1px solid rgba(148,163,184,0.12);
-            border-radius: 28px;
-            padding: 1.6rem;
-            display: grid;
-            gap: 1rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .event-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 24px 70px rgba(15,23,42,0.30);
-        }
-        .event-card h3 {
-            margin: 0;
-            font-size: 1.35rem;
-        }
-        .event-meta {
-            display: grid;
-            gap: 0.7rem;
-        }
-        .pill {
-            display: inline-flex;
-            gap: 0.55rem;
-            align-items: center;
-            padding: 0.65rem 0.95rem;
-            border-radius: 999px;
-            background: rgba(255,255,255,0.08);
-            color: var(--muted);
-            font-size: 0.95rem;
-        }
-        .pill strong { color: var(--text); }
-        .event-footer {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            gap: 1rem;
-            align-items: center;
-        }
-        .event-button,
-        .logout-button {
-            border: none;
-            border-radius: 16px;
-            padding: 0.95rem 1.4rem;
-            font-weight: 700;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .event-button {
-            color: white;
-            background: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
-        }
-        .event-button:hover { background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%); }
-        .logout-button {
-            background: rgba(255,255,255,0.08);
-            color: var(--text);
-            border: 1px solid rgba(148,163,184,0.14);
-        }
-        .logout-button:hover { background: rgba(255,255,255,0.12); }
-        @media (max-width: 720px) { .event-footer { flex-direction: column; align-items: stretch; } }
-    </style>
-</head>
-<body>
-    <main class="page-shell">
-        <section class="topbar">
-            <div>
-                <h1 class="brand-title">EventMate</h1>
-                <p class="brand-subtitle">Browse curated local events and connect with international newcomers around Germany.</p>
-            </div>
-            <div class="user-chip">
-                {% if guest %}
-                <span class="avatar">G</span>
-                <div>
-                    <p style="margin:0;font-weight:700;">Guest browsing</p>
-                    <p style="margin:0;color:var(--muted);font-size:0.95rem;">Attendee privacy enabled</p>
+{% extends "base.html" %}
+{% block title %}EventMate — Discover Events{% endblock %}
+{% block head %}
+<style>
+    .hero {
+        background: linear-gradient(135deg, rgba(37,99,235,0.22) 0%, rgba(96,165,250,0.08) 100%);
+        border: 1px solid rgba(96,165,250,0.2);
+        border-radius: 28px;
+        padding: 2.5rem 2rem;
+        margin-bottom: 2rem;
+        display: flex; flex-direction: column; gap: 1.2rem;
+    }
+    .hero h1 { font-size: clamp(1.8rem,3vw,2.8rem); font-weight: 800; letter-spacing: -0.03em; }
+    .hero h1 span { color: var(--accent); }
+    .hero p { color: var(--muted); max-width: 560px; line-height: 1.7; font-size: 1rem; }
+    .stats { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .stat { display: flex; flex-direction: column; }
+    .stat-num { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+    .stat-label { font-size: 0.8rem; color: var(--muted); }
+
+    .search-section { margin-bottom: 1.5rem; display: grid; gap: 1rem; }
+    .search-row {
+        display: flex; gap: 0.75rem;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 18px; padding: 0.75rem;
+    }
+    .search-row input {
+        flex: 1; border: none; background: transparent;
+        color: var(--text); font-size: 1rem; font-family: inherit;
+    }
+    .search-row input:focus { outline: none; }
+    .search-row input::placeholder { color: var(--muted); }
+    .search-btn {
+        border: none; background: linear-gradient(135deg,var(--accent-dark),var(--accent));
+        color: #fff; padding: 0.6rem 1.2rem; border-radius: 12px;
+        font-weight: 700; cursor: pointer; font-size: 0.9rem;
+    }
+    .filter-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .filter-input {
+        padding: 0.55rem 1rem; border: 1px solid var(--border);
+        border-radius: 12px; background: var(--surface2); color: var(--text);
+        font-size: 0.88rem; font-family: inherit;
+    }
+    .filter-input:focus { outline: none; border-color: var(--accent); }
+    .filter-input::placeholder { color: var(--muted); }
+    .clear-link { color: var(--muted); font-size: 0.88rem; align-self: center; text-decoration: none; }
+    .clear-link:hover { color: var(--accent); }
+
+    .cat-scroll {
+        display: flex; gap: 0.6rem; overflow-x: auto; padding-bottom: 0.3rem;
+        scrollbar-width: none;
+    }
+    .cat-scroll::-webkit-scrollbar { display: none; }
+    .cat-chip {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.5rem 1rem; border-radius: 999px;
+        border: 1px solid var(--border); background: var(--surface2);
+        color: var(--muted); font-size: 0.88rem; font-weight: 500;
+        white-space: nowrap; cursor: pointer; text-decoration: none;
+        transition: all .15s;
+    }
+    .cat-chip:hover, .cat-chip.active {
+        background: rgba(96,165,250,.18); border-color: rgba(96,165,250,.4); color: var(--accent);
+    }
+
+    .section-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 1rem; color: var(--text); }
+    .events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); gap: 1.2rem; }
+    .event-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 22px; overflow: hidden; display: flex; flex-direction: column;
+        transition: transform .2s, box-shadow .2s;
+    }
+    .event-card:hover { transform: translateY(-4px); box-shadow: 0 20px 60px rgba(0,0,0,0.35); }
+    .event-banner {
+        height: 110px; display: grid; place-items: center;
+        position: relative; overflow: hidden;
+    }
+    .event-banner img { width: 100%; height: 100%; object-fit: cover; }
+    .event-banner-gradient { width: 100%; height: 100%; }
+    .banner-cat {
+        position: absolute; top: 0.75rem; left: 0.75rem;
+        background: rgba(0,0,0,0.45); backdrop-filter: blur(8px);
+        border-radius: 999px; padding: 0.3rem 0.75rem;
+        font-size: 0.8rem; font-weight: 600; color: #fff;
+        display: flex; align-items: center; gap: 0.3rem;
+    }
+    .event-body { padding: 1.2rem; flex: 1; display: flex; flex-direction: column; gap: 0.9rem; }
+    .event-title { font-size: 1.1rem; font-weight: 700; line-height: 1.3; }
+    .event-pills { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .event-pill {
+        display: inline-flex; align-items: center; gap: 0.35rem;
+        padding: 0.3rem 0.75rem; border-radius: 999px;
+        background: var(--surface2); color: var(--muted); font-size: 0.8rem;
+    }
+    .attendee-bar { display: flex; align-items: center; gap: 0.6rem; }
+    .bar-track {
+        flex: 1; height: 4px; border-radius: 999px;
+        background: rgba(255,255,255,0.1); overflow: hidden;
+    }
+    .bar-fill { height: 100%; border-radius: 999px; background: var(--accent); }
+    .attendee-text { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+    .event-footer { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .joined-badge {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.6rem 1rem; border-radius: 12px;
+        background: rgba(74,222,128,.14); color: var(--green);
+        font-size: 0.88rem; font-weight: 600;
+    }
+    .no-events { text-align: center; padding: 3rem; color: var(--muted); }
+    .no-events h3 { font-size: 1.2rem; margin-bottom: 0.5rem; color: var(--text); }
+</style>
+{% endblock %}
+{% block body %}
+<div class="page">
+    <section class="hero">
+        <div>
+            <h1>Connect with <span>Like-Minded Students</span> at NRW Events</h1>
+            <p>Discover curated events across North Rhine-Westphalia. Join, find people who share your interests, and make the most of student life in Germany.</p>
+        </div>
+        <div class="stats">
+            <div class="stat"><span class="stat-num">{{ total_events }}</span><span class="stat-label">Events</span></div>
+            <div class="stat"><span class="stat-num">{{ total_users }}</span><span class="stat-label">Students</span></div>
+            <div class="stat"><span class="stat-num">10</span><span class="stat-label">Cities</span></div>
+        </div>
+    </section>
+
+    <section class="search-section">
+        <form method="get" action="/" id="filterForm">
+            <div style="display:grid;gap:0.75rem;">
+                <div class="search-row">
+                    <input type="text" name="q" placeholder="🔍  Search events..." value="{{ active_q }}" autocomplete="off">
+                    <input type="hidden" name="category" id="catInput" value="{{ active_category }}">
+                    <button type="submit" class="search-btn">Search</button>
                 </div>
-                {% else %}
-                <span class="avatar">{{ user.name[0] if user.name else 'U' }}</span>
-                <div>
-                    <p style="margin:0;font-weight:700;">{{ user.name }}</p>
-                    {% if user.email %}
-                    <p style="margin:0;color:var(--muted);font-size:0.95rem;">{{ user.email }}</p>
-                    {% elif user.state %}
-                    <p style="margin:0;color:var(--muted);font-size:0.95rem;">{% if user.city %}{{ user.city }}, {% endif %}{{ user.street }} {{ user.house_number }}, {{ user.state }}</p>
-                    {% else %}
-                    <p style="margin:0;color:var(--muted);font-size:0.95rem;">Signed in with Google</p>
+                <div class="filter-row">
+                    <input class="filter-input" type="text" name="city" placeholder="📍 City..." value="{{ active_city }}" style="width:160px">
+                    <input class="filter-input" type="text" name="language" placeholder="🗣️ Language..." value="{{ active_language }}" style="width:180px">
+                    {% if active_q or active_category or active_city or active_language %}
+                        <a href="/" class="clear-link">✕ Clear filters</a>
                     {% endif %}
                 </div>
+            </div>
+        </form>
+        <div class="cat-scroll">
+            <a class="cat-chip {{ 'active' if not active_category }}" href="/?{% if active_q %}q={{ active_q }}&{% endif %}{% if active_city %}city={{ active_city }}&{% endif %}{% if active_language %}language={{ active_language }}{% endif %}">All</a>
+            {% for cat in categories %}
+            <a class="cat-chip {{ 'active' if active_category == cat }}"
+               href="/?category={{ cat }}{% if active_q %}&q={{ active_q }}{% endif %}{% if active_city %}&city={{ active_city }}{% endif %}{% if active_language %}&language={{ active_language }}{% endif %}">
+                {{ category_icons[cat] }} {{ cat }}
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="section-title">
+        {% if events %}{{ events|length }} event{{ 's' if events|length != 1 }}{% if active_category %} in {{ active_category }}{% endif %}{% if active_q %} matching "{{ active_q }}"{% endif %}
+        {% else %}No events found{% endif %}
+    </div>
+
+    {% if events %}
+    <section class="events-grid">
+        {% for event in events %}
+        <article class="event-card">
+            <div class="event-banner">
+                {% if event.banner %}
+                    <img src="{{ url_for('static', filename='uploads/' + event.banner) }}" alt="{{ event.title }}">
+                {% else %}
+                    <div class="event-banner-gradient" style="background: {{ event.category_color }};"></div>
                 {% endif %}
-                <a class="logout-button" href="/logout">Logout</a>
+                <span class="banner-cat">{{ event.category_icon }} {{ event.category or 'Event' }}</span>
             </div>
-        </section>
-        <section class="hero">
-            <p>Welcome to EventMate — a modern login-first event hub for international students and non-native German speakers. Use Google to keep your event discovery secure and personal.</p>
-        </section>
-        <section class="state-selector" style="border-radius: 28px; background: rgba(255,255,255,0.05); border: 1px solid rgba(148,163,184,0.14); padding: 2rem; margin-bottom: 2rem; box-shadow: 0 24px 70px rgba(15,23,42,0.32);">
-            <h2 style="margin:0 0 1rem; color: var(--text);">Explore by State</h2>
-            <select id="stateSelect" style="width: 100%; border:1px solid rgba(148,163,184,0.2); border-radius:14px; padding:0.95rem 1rem; background:rgba(255,255,255,0.08); color:var(--text); font-size:1rem;">
-                <option value="">Select German State</option>
-                <option value="North Rhine-Westphalia">North Rhine-Westphalia</option>
-            </select>
-            <div id="placesDiv" style="display:none; margin-top:1rem;">
-                <h3 style="color: var(--text); margin:0 0 1rem;">Places in North Rhine-Westphalia</h3>
-                <ul style="list-style:none; padding:0; display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:0.5rem; color: var(--text);">
-                    <li>Bonn</li>
-                    <li>Cologne</li>
-                    <li>Düsseldorf</li>
-                    <li>Dortmund</li>
-                    <li>Essen</li>
-                    <li>Recklinghausen</li>
-                    <li>Gelsenkirchen</li>
-                    <li>Duisburg</li>
-                    <li>Bochum</li>
-                    <li>Wuppertal</li>
-                    <li>Bielefeld</li>
-                    <li>Münster</li>
-                </ul>
-            </div>
-        </section>
-        <section class="events-grid">
-            {% for event in events %}
-            <article class="event-card">
-                <div>
-                    <h3>{{ event.title }}</h3>
-                    <div class="event-meta">
-                        <span class="pill"><strong>Date:</strong> {{ event.date }}</span>
-                        <span class="pill"><strong>Location:</strong> {{ event.location }}</span>
-                        <span class="pill"><strong>Language:</strong> {{ event.language }}</span>
-                        <span class="pill"><strong>Category:</strong> {{ event.category }}</span>
-                    </div>
+            <div class="event-body">
+                <div class="event-title">{{ event.title }}</div>
+                <div class="event-pills">
+                    <span class="event-pill">📅 {{ event.date }}{% if event.time %} · {{ event.time }}{% endif %}</span>
+                    <span class="event-pill">📍 {{ event.location }}</span>
+                    {% if event.language %}<span class="event-pill">🗣️ {{ event.language }}</span>{% endif %}
+                </div>
+                {% if event.description %}
+                <div style="color:var(--muted);font-size:0.875rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ event.description }}</div>
+                {% endif %}
+                <div class="attendee-bar">
+                    {% set pct = ((event.attendee_count / event.max_participants * 100) | int) if event.max_participants else 0 %}
+                    <div class="bar-track"><div class="bar-fill" style="width:{{ pct }}%"></div></div>
+                    <span class="attendee-text">
+                        {{ event.attendee_count }}{% if event.max_participants %} / {{ event.max_participants }}{% endif %} joined
+                    </span>
                 </div>
                 <div class="event-footer">
-                    <a class="event-button" href="/find_people/{{ event.id }}">Find People</a>
-                    {% if guest %}
-                        <span class="pill" style="background: rgba(255,255,255,0.08); color: var(--text);">Guest view</span>
-                    {% elif event.id in joined_events %}
-                        <span class="pill" style="background: rgba(34,197,94,0.14); color: #bbf7d0;">Joined</span>
+                    <a class="btn btn-primary btn-sm" href="/event/{{ event.id }}">View Event</a>
+                    {% if not guest %}
+                        {% if event.id in joined_events %}
+                            <span class="joined-badge">✓ Joined</span>
+                        {% else %}
+                            {% if event.max_participants and event.attendee_count >= event.max_participants %}
+                                <span class="pill" style="font-size:0.82rem;">Full</span>
+                            {% else %}
+                                <a class="btn btn-green btn-sm" href="/join/{{ event.id }}">Join</a>
+                            {% endif %}
+                        {% endif %}
                     {% else %}
-                        <a class="event-button" href="/join/{{ event.id }}" style="background: linear-gradient(135deg, #16a34a 0%, #4ade80 100%);">Join Event</a>
+                        <a class="btn btn-ghost btn-sm" href="/login">Login to join</a>
                     {% endif %}
                 </div>
-            </article>
-            {% endfor %}
-        </section>
-    </main>
-    <script>
-        document.getElementById('stateSelect').addEventListener('change', function() {
-            var placesDiv = document.getElementById('placesDiv');
-            if (this.value === 'North Rhine-Westphalia') {
-                placesDiv.style.display = 'block';
-            } else {
-                placesDiv.style.display = 'none';
-            }
-        });
-    </script>
-</body>
-</html>
+            </div>
+        </article>
+        {% endfor %}
+    </section>
+    {% else %}
+    <div class="no-events">
+        <h3>No events found</h3>
+        <p>Try adjusting your search or filters.</p>
+        <br>
+        <a href="/" class="btn btn-ghost" style="display:inline-flex;">Clear filters</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

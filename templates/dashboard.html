@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}My Dashboard — EventMate{% endblock %}
+{% block head %}
+<style>
+    .dash-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem; }
+    .dash-header h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.03em; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fill,minmax(180px,1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 1.2rem 1.5rem; }
+    .stat-card .num { font-size: 2rem; font-weight: 800; color: var(--accent); }
+    .stat-card .lbl { font-size: 0.82rem; color: var(--muted); margin-top: 0.2rem; }
+    .events-table { display: grid; gap: 0.75rem; }
+    .event-row {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 18px; padding: 1rem 1.2rem;
+        display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    }
+    .event-row-banner {
+        width: 72px; height: 48px; border-radius: 10px; overflow: hidden;
+        flex-shrink: 0; background: var(--surface2);
+    }
+    .event-row-banner img { width: 100%; height: 100%; object-fit: cover; }
+    .event-row-banner-grad { width: 100%; height: 100%; }
+    .event-row-info { flex: 1; min-width: 0; }
+    .event-row-title { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-row-meta { color: var(--muted); font-size: 0.82rem; margin-top: 0.2rem; }
+    .event-row-actions { display: flex; gap: 0.5rem; align-items: center; }
+    .attendee-count { display: flex; align-items: center; gap: 0.3rem; color: var(--muted); font-size: 0.82rem; background: var(--surface2); padding: 0.3rem 0.75rem; border-radius: 999px; }
+    .empty-state { text-align: center; padding: 3rem; color: var(--muted); }
+    .empty-state h3 { font-size: 1.2rem; color: var(--text); margin-bottom: 0.5rem; }
+</style>
+{% endblock %}
+{% block body %}
+<div class="page">
+    <div class="dash-header">
+        <div>
+            <h1>My Dashboard</h1>
+            <p style="color:var(--muted);margin-top:0.3rem;">Manage your events and track attendance.</p>
+        </div>
+        <a href="/create_event" class="btn btn-primary">+ Create Event</a>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="num">{{ my_events|length }}</div>
+            <div class="lbl">Events Created</div>
+        </div>
+        <div class="stat-card">
+            <div class="num">{{ total_attendees }}</div>
+            <div class="lbl">Total Attendees</div>
+        </div>
+        <div class="stat-card">
+            <div class="num">{{ my_events|selectattr('attendee_count','gt',0)|list|length }}</div>
+            <div class="lbl">Events with Attendees</div>
+        </div>
+    </div>
+
+    <div style="font-size:1.05rem;font-weight:700;margin-bottom:1rem;">Your Events</div>
+
+    {% if my_events %}
+    <div class="events-table">
+        {% for event in my_events %}
+        <div class="event-row">
+            <div class="event-row-banner">
+                {% if event.banner %}
+                    <img src="{{ url_for('static', filename='uploads/' + event.banner) }}" alt="">
+                {% else %}
+                    <div class="event-row-banner-grad" style="background:{{ event.category_color }};"></div>
+                {% endif %}
+            </div>
+            <div class="event-row-info">
+                <div class="event-row-title">{{ event.title }}</div>
+                <div class="event-row-meta">
+                    {{ event.date }}{% if event.time %} · {{ event.time }}{% endif %} · {{ event.location }}
+                    {% if event.category %} · {{ event.category_icon }} {{ event.category }}{% endif %}
+                </div>
+            </div>
+            <span class="attendee-count">👥 {{ event.attendee_count }}{% if event.max_participants %}/{{ event.max_participants }}{% endif %}</span>
+            <div class="event-row-actions">
+                <a href="/event/{{ event.id }}" class="btn btn-ghost btn-sm">View</a>
+                <a href="/event/{{ event.id }}/edit" class="btn btn-ghost btn-sm">Edit</a>
+                <form method="post" action="/event/{{ event.id }}/delete" onsubmit="return confirm('Delete \'{{ event.title }}\'? This cannot be undone.')">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state card">
+        <h3>No events yet</h3>
+        <p>Create your first event and invite the community!</p>
+        <br>
+        <a href="/create_event" class="btn btn-primary btn-sm">+ Create Event</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

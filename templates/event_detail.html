@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block title %}{{ event.title }} — EventMate{% endblock %}
+{% block head %}
+<style>
+    .event-hero {
+        height: 260px; border-radius: 24px; overflow: hidden;
+        margin-bottom: 1.5rem; position: relative;
+    }
+    .event-hero img { width: 100%; height: 100%; object-fit: cover; }
+    .event-hero-gradient { width: 100%; height: 100%; }
+    .hero-overlay {
+        position: absolute; inset: 0;
+        background: linear-gradient(to top, rgba(2,6,23,0.85) 0%, transparent 60%);
+        display: flex; flex-direction: column; justify-content: flex-end;
+        padding: 1.5rem;
+    }
+    .event-cat-badge {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.35rem 0.9rem; border-radius: 999px;
+        background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+        font-size: 0.82rem; font-weight: 600; color: #fff;
+        border: 1px solid rgba(255,255,255,0.15);
+        margin-bottom: 0.6rem; width: fit-content;
+    }
+    .event-hero-title { font-size: clamp(1.5rem,3vw,2.2rem); font-weight: 800; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,0.5); }
+
+    .detail-layout { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start; }
+    @media (max-width: 768px) { .detail-layout { grid-template-columns: 1fr; } }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem; }
+    @media (max-width: 480px) { .info-grid { grid-template-columns: 1fr; } }
+    .info-cell {
+        background: var(--surface2); border: 1px solid var(--border);
+        border-radius: 14px; padding: 0.85rem 1rem;
+        display: flex; flex-direction: column; gap: 0.2rem;
+    }
+    .info-cell-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .info-cell-value { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+
+    .desc-section { margin-bottom: 1.5rem; }
+    .desc-section h3 { font-size: 1rem; font-weight: 700; color: var(--muted); margin-bottom: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .desc-text { color: var(--muted); line-height: 1.75; font-size: 0.95rem; }
+
+    .sidebar-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 1.25rem; display: grid; gap: 1rem; }
+    .capacity-row { display: grid; gap: 0.4rem; }
+    .cap-bar-track { height: 6px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .cap-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(to right, var(--accent-dark), var(--accent)); }
+    .cap-text { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--muted); }
+    .full-badge { display: inline-block; padding: 0.3rem 0.8rem; border-radius: 999px; background: rgba(239,68,68,.15); color: #fca5a5; font-size: 0.82rem; font-weight: 600; }
+    .joined-big { display: flex; align-items: center; gap: 0.5rem; padding: 0.85rem 1rem; border-radius: 14px; background: rgba(74,222,128,.14); color: var(--green); font-weight: 700; }
+    .map-link { display: flex; align-items: center; gap: 0.5rem; color: var(--accent); text-decoration: none; font-size: 0.9rem; font-weight: 500; }
+    .map-link:hover { text-decoration: underline; }
+    .organizer-row { display: flex; align-items: center; gap: 0.75rem; }
+    .org-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-dark); display: grid; place-items: center; font-weight: 700; color: #fff; font-size: 0.9rem; overflow: hidden; flex-shrink: 0; }
+    .org-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .attendees-section { margin-top: 2rem; }
+    .attendees-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+    .attendees-grid { display: grid; gap: 0.75rem; }
+    .attendee-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 16px; padding: 1rem 1.2rem;
+        display: flex; align-items: flex-start; gap: 1rem;
+    }
+    .attendee-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--accent-dark); display: grid; place-items: center; font-weight: 700; color: #fff; flex-shrink: 0; overflow: hidden; font-size: 1rem; }
+    .attendee-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .attendee-info { flex: 1; min-width: 0; }
+    .attendee-name { font-weight: 700; font-size: 0.95rem; }
+    .attendee-sub { color: var(--muted); font-size: 0.82rem; margin-top: 0.15rem; }
+    .common-list { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+    .common-tag {
+        display: inline-flex; align-items: center; gap: 0.3rem;
+        padding: 0.25rem 0.65rem; border-radius: 999px;
+        background: rgba(96,165,250,.13); color: var(--accent);
+        font-size: 0.78rem; font-weight: 500;
+    }
+    .self-badge { padding: 0.25rem 0.65rem; border-radius: 999px; background: rgba(74,222,128,.13); color: var(--green); font-size: 0.78rem; font-weight: 500; }
+    .edit-actions { display: flex; gap: 0.6rem; }
+</style>
+{% endblock %}
+{% block body %}
+<div class="page">
+    <div style="margin-bottom:1rem;">
+        <a href="/" style="color:var(--muted);text-decoration:none;font-size:0.9rem;">← Back to events</a>
+    </div>
+
+    <div class="event-hero">
+        {% if event.banner %}
+            <img src="{{ url_for('static', filename='uploads/' + event.banner) }}" alt="{{ event.title }}">
+        {% else %}
+            <div class="event-hero-gradient" style="background: {{ event.category_color }};"></div>
+        {% endif %}
+        <div class="hero-overlay">
+            <span class="event-cat-badge">{{ event.category_icon }} {{ event.category or 'Event' }}</span>
+            <h1 class="event-hero-title">{{ event.title }}</h1>
+        </div>
+    </div>
+
+    {% if is_organizer %}
+    <div class="edit-actions" style="margin-bottom:1.2rem;">
+        <a href="/event/{{ event.id }}/edit" class="btn btn-ghost btn-sm">✏️ Edit Event</a>
+        <form method="post" action="/event/{{ event.id }}/delete" onsubmit="return confirm('Delete this event?')">
+            <button type="submit" class="btn btn-danger btn-sm">🗑 Delete</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="detail-layout">
+        <div>
+            <div class="info-grid">
+                <div class="info-cell">
+                    <span class="info-cell-label">📅 Date</span>
+                    <span class="info-cell-value">{{ event.date }}</span>
+                </div>
+                {% if event.time %}
+                <div class="info-cell">
+                    <span class="info-cell-label">⏰ Time</span>
+                    <span class="info-cell-value">{{ event.time }}</span>
+                </div>
+                {% endif %}
+                <div class="info-cell">
+                    <span class="info-cell-label">📍 Location</span>
+                    <span class="info-cell-value">{{ event.location }}</span>
+                </div>
+                {% if event.language %}
+                <div class="info-cell">
+                    <span class="info-cell-label">🗣️ Language</span>
+                    <span class="info-cell-value">{{ event.language }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if event.description %}
+            <div class="desc-section">
+                <h3>About this event</h3>
+                <p class="desc-text">{{ event.description }}</p>
+            </div>
+            {% endif %}
+
+            <div class="attendees-section">
+                <div class="attendees-title">
+                    👥 Attendees
+                    <span style="color:var(--muted);font-weight:400;font-size:0.9rem;">({{ event.attendee_count }})</span>
+                </div>
+                {% if guest %}
+                    <div class="card" style="text-align:center;padding:2rem;">
+                        <p style="color:var(--muted);">Login to see who's attending this event.</p>
+                        <br>
+                        <a href="/login" class="btn btn-primary btn-sm">Login to view</a>
+                    </div>
+                {% elif attendees %}
+                    <div class="attendees-grid">
+                        {% for a in attendees %}
+                        <div class="attendee-card">
+                            <div class="attendee-avatar">
+                                {% if a.profile_picture %}
+                                    <img src="{{ url_for('static', filename='uploads/' + a.profile_picture) }}" alt="">
+                                {% else %}
+                                    {{ a.name[0] | upper }}
+                                {% endif %}
+                            </div>
+                            <div class="attendee-info">
+                                <a href="/profile/{{ a.id }}" style="text-decoration:none;">
+                                    <div class="attendee-name">{{ a.name }} {% if a.is_self %}<span class="self-badge">You</span>{% endif %}</div>
+                                </a>
+                                {% if a.university or a.study_program %}
+                                <div class="attendee-sub">
+                                    {% if a.study_program %}{{ a.study_program }}{% endif %}
+                                    {% if a.university %} · {{ a.university }}{% endif %}
+                                </div>
+                                {% endif %}
+                                {% if a.common and not a.is_self %}
+                                <div class="common-list">
+                                    {% for c in a.common %}
+                                        <span class="common-tag">✔ {{ c }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="card" style="text-align:center;padding:2rem;">
+                        <p style="color:var(--muted);">No one has joined yet. Be the first!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            <div class="sidebar-card">
+                {% if event.max_participants %}
+                <div class="capacity-row">
+                    <div class="cap-text">
+                        <span>{{ event.attendee_count }} joined</span>
+                        <span>{{ event.max_participants }} max</span>
+                    </div>
+                    {% set pct = [(event.attendee_count / event.max_participants * 100)|int, 100]|min %}
+                    <div class="cap-bar-track"><div class="cap-bar-fill" style="width:{{ pct }}%"></div></div>
+                    {% if event.attendee_count >= event.max_participants %}
+                        <span class="full-badge">Event is full</span>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div style="color:var(--muted);font-size:0.9rem;">{{ event.attendee_count }} people joined</div>
+                {% endif %}
+
+                {% if guest %}
+                    <a href="/login" class="btn btn-primary" style="width:100%;text-align:center;">Login to join</a>
+                {% elif joined %}
+                    <div class="joined-big">✓ You're attending this event</div>
+                    <form method="post" action="/unjoin/{{ event.id }}">
+                        <button type="submit" class="btn btn-ghost btn-sm" style="width:100%;">Leave event</button>
+                    </form>
+                {% else %}
+                    {% if event.max_participants and event.attendee_count >= event.max_participants %}
+                        <button class="btn btn-ghost" disabled style="width:100%;opacity:0.5;cursor:not-allowed;">Event full</button>
+                    {% else %}
+                        <a href="/join/{{ event.id }}" class="btn btn-green" style="width:100%;text-align:center;">Join Event</a>
+                    {% endif %}
+                {% endif %}
+
+                <a class="map-link" href="https://maps.google.com/?q={{ event.location | urlencode }}" target="_blank" rel="noopener">
+                    📍 View on Google Maps
+                </a>
+
+                <div>
+                    <div style="font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:0.5rem;">Organizer</div>
+                    <div class="organizer-row">
+                        <div class="org-avatar">
+                            {% if organizer and organizer.profile_picture %}
+                                <img src="{{ url_for('static', filename='uploads/' + organizer.profile_picture) }}" alt="">
+                            {% else %}
+                                {{ event.organizer_name[0] | upper }}
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if organizer %}
+                                <a href="/profile/{{ organizer.id }}" style="font-weight:600;text-decoration:none;font-size:0.9rem;">{{ event.organizer_name }}</a>
+                            {% else %}
+                                <span style="font-weight:600;font-size:0.9rem;">{{ event.organizer_name }}</span>
+                            {% endif %}
+                            {% if event.organizer_username %}
+                                <div style="color:var(--muted);font-size:0.8rem;">@{{ event.organizer_username }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
