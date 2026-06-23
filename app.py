@@ -770,6 +770,25 @@ def logout():
     return redirect(url_for('login'))
 
 
+@app.route('/about', methods=['GET', 'POST'])
+def about():
+    sent = False
+    error = None
+    form = {}
+    if request.method == 'POST':
+        sender_name = request.form.get('sender_name', '').strip()
+        email = request.form.get('email', '').strip()
+        subject = request.form.get('subject', '').strip()
+        message = request.form.get('message', '').strip()
+        form = {'sender_name': sender_name, 'email': email, 'subject': subject, 'message': message}
+        if not sender_name or not email or not subject or not message:
+            error = 'Please fill in all fields.'
+        else:
+            sent = True
+            form = {}
+    return render_template('about.html', sent=sent, error=error, form=form)
+
+
 init_db()
 
 if __name__ == '__main__':
