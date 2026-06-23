@@ -42,11 +42,18 @@ if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
         client_kwargs={'scope': 'openid email profile', 'prompt': 'select_account'},
     )
 
-CATEGORIES = ['Music', 'Sports', 'Gaming', 'Food', 'Technology', 'Cultural', 'Business', 'Workshop', 'Career', 'Language Exchange']
+CATEGORIES = [
+    'Music', 'Sports', 'Gaming', 'Food', 'Technology', 'Cultural', 'Culture',
+    'Business', 'Workshop', 'Career', 'Language Exchange',
+    'Art', 'Cinema', 'Festival', 'Market', 'Networking', 'Theatre',
+]
 CATEGORY_ICONS = {
     'Music': '🎵', 'Sports': '⚽', 'Gaming': '🎮', 'Food': '🍔',
-    'Technology': '💻', 'Cultural': '🎭', 'Business': '💼',
-    'Workshop': '🔧', 'Career': '🎓', 'Language Exchange': '🗣️',
+    'Technology': '💻', 'Cultural': '🎭', 'Culture': '🎭',
+    'Business': '💼', 'Workshop': '🔧', 'Career': '🎓',
+    'Language Exchange': '🗣️', 'Art': '🎨', 'Cinema': '🎬',
+    'Festival': '🎉', 'Market': '🛍️', 'Networking': '🤝',
+    'Theatre': '🎭',
 }
 CATEGORY_COLORS = {
     'Music': 'linear-gradient(135deg,#6d28d9,#8b5cf6)',
@@ -55,10 +62,17 @@ CATEGORY_COLORS = {
     'Food': 'linear-gradient(135deg,#92400e,#f59e0b)',
     'Technology': 'linear-gradient(135deg,#0e7490,#22d3ee)',
     'Cultural': 'linear-gradient(135deg,#7c2d12,#f97316)',
+    'Culture': 'linear-gradient(135deg,#7c2d12,#f97316)',
     'Business': 'linear-gradient(135deg,#1f2937,#6b7280)',
     'Workshop': 'linear-gradient(135deg,#312e81,#6366f1)',
     'Career': 'linear-gradient(135deg,#9d174d,#f43f5e)',
     'Language Exchange': 'linear-gradient(135deg,#0f766e,#14b8a6)',
+    'Art': 'linear-gradient(135deg,#831843,#ec4899)',
+    'Cinema': 'linear-gradient(135deg,#1c1917,#78716c)',
+    'Festival': 'linear-gradient(135deg,#713f12,#eab308)',
+    'Market': 'linear-gradient(135deg,#134e4a,#2dd4bf)',
+    'Networking': 'linear-gradient(135deg,#1e3a5f,#60a5fa)',
+    'Theatre': 'linear-gradient(135deg,#4a044e,#c026d3)',
 }
 
 
