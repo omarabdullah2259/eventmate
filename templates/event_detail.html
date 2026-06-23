@@ -210,6 +210,9 @@
                     <a href="/login" class="btn btn-primary" style="width:100%;text-align:center;">Login to join</a>
                 {% elif joined %}
                     <div class="joined-big">✓ You're attending this event</div>
+                    <a href="/event/{{ event.id }}/chat" class="btn btn-primary" style="width:100%;text-align:center;">
+                        💬 Group Chat
+                    </a>
                     <form method="post" action="/unjoin/{{ event.id }}">
                         <button type="submit" class="btn btn-ghost btn-sm" style="width:100%;">Leave event</button>
                     </form>

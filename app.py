@@ -1,7 +1,8 @@
 import os
 import uuid
+from datetime import datetime
 from functools import wraps
-from flask import Flask, render_template, redirect, url_for, session, request
+from flask import Flask, render_template, redirect, url_for, session, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from authlib.integrations.flask_client import OAuth
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -172,6 +173,15 @@ class EventJoin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+
+
+class ChatMessage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    sender = db.relationship('User', lazy=True)
 
 
 def init_db():
@@ -426,6 +436,90 @@ def unjoin_event(event_id):
 @app.route('/find_people/<int:event_id>')
 def find_people(event_id):
     return redirect(url_for('event_detail', event_id=event_id))
+
+
+def _chat_message_to_dict(msg):
+    return {
+        'id': msg.id,
+        'event_id': msg.event_id,
+        'user_id': msg.user_id,
+        'message': msg.message,
+        'timestamp': msg.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+        'sender_name': msg.sender.name if msg.sender else 'Unknown',
+        'profile_picture': msg.sender.profile_picture if msg.sender else None,
+    }
+
+
+@app.route('/event/<int:event_id>/chat')
+@login_required
+def event_chat(event_id):
+    user = get_current_user()
+    event = Event.query.get_or_404(event_id)
+    joined = EventJoin.query.filter_by(user_id=user.id, event_id=event_id).first()
+    if not joined:
+        return render_template('error.html',
+            title='Access Denied',
+            message='You must join this event before accessing the group chat.',
+            back_url=url_for('event_detail', event_id=event_id)), 403
+
+    messages = ChatMessage.query.filter_by(event_id=event_id)\
+        .order_by(ChatMessage.timestamp.asc()).all()
+
+    member_ids = [ej.user_id for ej in EventJoin.query.filter_by(event_id=event_id).all()]
+    members = User.query.filter(User.id.in_(member_ids)).all()
+
+    event_dict = event.to_dict()
+
+    return render_template('chat.html',
+        event=event_dict,
+        user=user.to_dict() if hasattr(user, 'to_dict') else {
+            'id': user.id, 'name': user.name, 'username': user.username,
+            'profile_picture': user.profile_picture,
+        },
+        messages=[_chat_message_to_dict(m) for m in messages],
+        members=members,
+    )
+
+
+@app.route('/event/<int:event_id>/chat/send', methods=['POST'])
+@login_required
+def event_chat_send(event_id):
+    user = get_current_user()
+    event = Event.query.get_or_404(event_id)
+    joined = EventJoin.query.filter_by(user_id=user.id, event_id=event_id).first()
+    if not joined:
+        return jsonify({'ok': False, 'error': 'You must join the event first.'}), 403
+
+    data = request.get_json(silent=True) or {}
+    text = (data.get('message') or '').strip()
+    if not text:
+        return jsonify({'ok': False, 'error': 'Message cannot be empty.'}), 400
+    if len(text) > 2000:
+        return jsonify({'ok': False, 'error': 'Message is too long (max 2000 chars).'}), 400
+
+    msg = ChatMessage(event_id=event_id, user_id=user.id, message=text)
+    db.session.add(msg)
+    db.session.commit()
+    db.session.refresh(msg)
+
+    return jsonify({'ok': True, 'message': _chat_message_to_dict(msg)})
+
+
+@app.route('/event/<int:event_id>/chat/messages')
+@login_required
+def event_chat_messages(event_id):
+    user = get_current_user()
+    joined = EventJoin.query.filter_by(user_id=user.id, event_id=event_id).first()
+    if not joined:
+        return jsonify({'ok': False, 'error': 'Access denied.'}), 403
+
+    after_id = request.args.get('after', 0, type=int)
+    msgs = ChatMessage.query.filter(
+        ChatMessage.event_id == event_id,
+        ChatMessage.id > after_id
+    ).order_by(ChatMessage.timestamp.asc()).all()
+
+    return jsonify({'ok': True, 'messages': [_chat_message_to_dict(m) for m in msgs]})
 
 
 @app.route('/create_event', methods=['GET', 'POST'])
