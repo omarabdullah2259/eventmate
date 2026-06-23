@@ -38,6 +38,7 @@ if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=True)
+    username = db.Column(db.String(80), unique=True, nullable=True)
     name = db.Column(db.String(120), nullable=False)
     first_name = db.Column(db.String(60))
     last_name = db.Column(db.String(60))
@@ -52,6 +53,7 @@ class User(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            'username': self.username,
             'name': self.name,
             'first_name': self.first_name,
             'last_name': self.last_name,
@@ -237,6 +239,7 @@ def login_guest():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
+        username = request.form.get('username', '').strip()
         first_name = request.form.get('first_name', '').strip()
         last_name = request.form.get('last_name', '').strip()
         state = request.form.get('state', '').strip()
@@ -245,20 +248,21 @@ def signup():
         house_number = request.form.get('house_number', '').strip()
         password = request.form.get('password', '').strip()
 
-        if not (first_name and last_name and state and street and house_number and password):
+        if not (username and first_name and last_name and state and street and house_number and password):
             return render_template('signup.html', error='Please fill in all fields.')
 
         if state == 'North Rhine-Westphalia' and not city:
             return render_template('signup.html', error='Please select a city for North Rhine-Westphalia.')
 
         full_name = f'{first_name} {last_name}'
-        
-        # Check if user already exists
-        if User.query.filter_by(name=full_name).first():
-            return render_template('signup.html', error='Name already exists. Please choose another.')
+
+        # Check if username already exists
+        if User.query.filter_by(username=username).first():
+            return render_template('signup.html', error='Username already taken. Please choose another.')
 
         # Create new user
         user = User(
+            username=username,
             name=full_name,
             first_name=first_name,
             last_name=last_name,
@@ -291,11 +295,11 @@ def login_google():
 
 @app.route('/login/manual', methods=['POST'])
 def login_manual():
-    name = request.form.get('name', '').strip()
+    username = request.form.get('username', '').strip()
     password = request.form.get('password', '').strip()
 
-    user = User.query.filter_by(name=name, auth_method='password').first()
-    
+    user = User.query.filter_by(username=username, auth_method='password').first()
+
     if user and check_password_hash(user.password_hash, password):
         session['user_id'] = user.id
         session.pop('guest', None)
@@ -304,7 +308,7 @@ def login_manual():
         return render_template(
             'login.html',
             google_enabled=bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
-            error='Invalid name or password.',
+            error='Invalid username or password.',
             user=None,
             guest=None
         )

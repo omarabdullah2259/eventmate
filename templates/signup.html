@@ -113,11 +113,14 @@
                 <h1>Create account</h1>
             </div>
         </div>
-        <p>Enter your name and German address details to create a new account.</p>
+        <p>Choose a username and fill in your details to create a new account.</p>
         {% if error %}
         <p class="error">{{ error }}</p>
         {% endif %}
         <form method="post" action="/signup">
+            <label>Username
+                <input type="text" name="username" autocomplete="username" placeholder="e.g. john_doe" required>
+            </label>
             <label>First Name
                 <input type="text" name="first_name" required>
             </label>
