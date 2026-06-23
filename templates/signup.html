@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EventMate Sign Up</title>
-    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
     <style>
         :root {
             --bg: #0b1220;
@@ -33,16 +33,18 @@
             box-shadow: 0 30px 80px rgba(0,0,0,0.3);
         }
         .logo {
-            display: inline-flex;
+            display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
+            gap: 0.4rem;
+            margin-bottom: 1.75rem;
+            text-align: center;
         }
-        .brand-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: var(--accent);
+        .logo-img {
+            width: 88px;
+            height: 88px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 16px rgba(96,165,250,0.4));
         }
         h1 {
             margin: 0;
@@ -107,11 +109,8 @@
 <body>
     <article class="card">
         <div class="logo">
-            <span class="brand-dot"></span>
-            <div>
-                <p style="margin:0; color:var(--accent); text-transform:uppercase; letter-spacing:0.16em; font-size:0.75rem;">EventMate</p>
-                <h1>Create account</h1>
-            </div>
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="EventMate" class="logo-img">
+            <h1>Create account</h1>
         </div>
         <p>Choose a username and fill in your details to create a new account.</p>
         {% if error %}
