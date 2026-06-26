@@ -2,183 +2,368 @@
 {% block title %}About & Contact — EventMate{% endblock %}
 {% block head %}
 <style>
-    .about-hero {
-        background: linear-gradient(135deg, rgba(37,99,235,0.2) 0%, rgba(96,165,250,0.07) 100%);
-        border: 1px solid rgba(96,165,250,0.18);
-        border-radius: 28px;
-        padding: 3rem 2.5rem;
-        margin-bottom: 2rem;
-        display: flex;
-        align-items: center;
-        gap: 2.5rem;
-        flex-wrap: wrap;
-    }
-    .about-logo {
-        width: 110px;
-        height: 110px;
-        object-fit: contain;
-        filter: drop-shadow(0 6px 24px rgba(96,165,250,0.45));
-        flex-shrink: 0;
-    }
-    .about-hero-text h1 {
-        font-size: clamp(1.8rem, 3vw, 2.6rem);
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        margin-bottom: 0.5rem;
-    }
-    .about-hero-text h1 span { color: var(--accent); }
-    .about-hero-text p { color: var(--muted); line-height: 1.75; max-width: 560px; }
+    /* ── Keyframes ── */
+    @keyframes floatY   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+    @keyframes pulseRing{ 0%{box-shadow:0 0 0 0 rgba(96,165,250,.45)} 70%{box-shadow:0 0 0 18px rgba(96,165,250,0)} 100%{box-shadow:0 0 0 0 rgba(96,165,250,0)} }
+    @keyframes gradMove { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+    @keyframes fadeUp   { from{opacity:0;transform:translateY(32px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes scaleIn  { from{opacity:0;transform:scale(.9)} to{opacity:1;transform:scale(1)} }
+    @keyframes shimmer  { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+    @keyframes spin     { to{transform:rotate(360deg)} }
+    @keyframes blink    { 0%,100%{opacity:1} 50%{opacity:0} }
 
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
-    @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+    /* ── Reveal system ── */
+    .reveal { opacity:0; transform:translateY(28px); transition:opacity .65s ease, transform .65s ease; }
+    .reveal.visible { opacity:1; transform:none; }
+    .reveal-delay-1 { transition-delay:.1s; }
+    .reveal-delay-2 { transition-delay:.2s; }
+    .reveal-delay-3 { transition-delay:.3s; }
+    .reveal-delay-4 { transition-delay:.4s; }
 
-    .info-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 22px;
-        padding: 1.75rem;
+    /* ── Hero ── */
+    .hero-wrap {
+        position:relative; overflow:hidden;
+        border-radius:28px; margin-bottom:2rem;
+        background: linear-gradient(270deg,#020617,#0f1e3a,#0a2a5e,#1e3a8a,#0e1730);
+        background-size:400% 400%;
+        animation: gradMove 8s ease infinite;
+        border:1px solid rgba(96,165,250,0.18);
+        padding:3.5rem 2.5rem;
+        display:flex; align-items:center; gap:2.5rem; flex-wrap:wrap;
     }
-    .info-card h2 {
-        font-size: 1.1rem; font-weight: 700;
-        margin-bottom: 1rem;
-        display: flex; align-items: center; gap: 0.5rem;
+    .hero-orb {
+        position:absolute; border-radius:50%; filter:blur(70px); pointer-events:none;
     }
-    .info-card p, .info-card li {
-        color: var(--muted);
-        line-height: 1.75;
-        font-size: 0.92rem;
-    }
-    .info-card ul { padding-left: 1.2rem; display: grid; gap: 0.4rem; margin: 0; }
+    .hero-orb-1 { width:300px;height:300px;background:rgba(37,99,235,.35);top:-80px;right:-60px; }
+    .hero-orb-2 { width:200px;height:200px;background:rgba(96,165,250,.2);bottom:-60px;left:10%; }
 
+    .hero-logo-wrap {
+        position:relative; flex-shrink:0;
+        animation:floatY 4s ease-in-out infinite;
+    }
+    .hero-logo-wrap::after {
+        content:''; position:absolute; inset:-8px; border-radius:50%;
+        animation:pulseRing 2.5s ease-out infinite;
+    }
+    .hero-logo {
+        width:120px; height:120px; object-fit:contain; position:relative; z-index:1;
+        filter:drop-shadow(0 8px 30px rgba(96,165,250,.6));
+    }
+
+    .hero-text { position:relative; z-index:1; }
+    .hero-badge {
+        display:inline-flex; align-items:center; gap:0.45rem;
+        padding:.35rem .9rem; border-radius:999px;
+        background:rgba(96,165,250,.15); border:1px solid rgba(96,165,250,.3);
+        color:var(--accent); font-size:.8rem; font-weight:600;
+        margin-bottom:.9rem;
+    }
+    .hero-badge-dot {
+        width:7px;height:7px;border-radius:50%;
+        background:var(--accent); animation:pulseRing 1.8s ease-out infinite;
+    }
+    .hero-title {
+        font-size:clamp(2rem,4vw,3rem); font-weight:800;
+        letter-spacing:-.035em; line-height:1.15; margin-bottom:.75rem;
+        color:#fff;
+    }
+    .hero-title .highlight {
+        background:linear-gradient(90deg,#60a5fa,#a78bfa,#60a5fa);
+        background-size:200% auto;
+        -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+        background-clip:text;
+        animation:shimmer 3s linear infinite;
+    }
+    #typewriter { border-right:2px solid var(--accent); animation:blink 1s step-end infinite; }
+    .hero-sub { color:rgba(226,232,240,.7); line-height:1.75; max-width:520px; font-size:.95rem; }
+
+    /* ── Stats row ── */
+    .stats-row {
+        display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+        gap:1rem; margin-bottom:2rem;
+    }
+    .stat-card {
+        background:var(--surface); border:1px solid var(--border); border-radius:20px;
+        padding:1.5rem 1.25rem; text-align:center; position:relative; overflow:hidden;
+        cursor:default; transition:transform .2s, box-shadow .2s;
+    }
+    .stat-card:hover { transform:translateY(-5px); box-shadow:0 20px 50px rgba(0,0,0,.3); }
+    .stat-card::before {
+        content:''; position:absolute; inset:0; opacity:0;
+        background:radial-gradient(circle at 50% 0%,rgba(96,165,250,.12),transparent 70%);
+        transition:opacity .3s;
+    }
+    .stat-card:hover::before { opacity:1; }
+    .stat-num {
+        font-size:2.4rem; font-weight:900; letter-spacing:-.03em;
+        background:linear-gradient(135deg,#60a5fa,#a78bfa);
+        -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+        background-clip:text;
+    }
+    .stat-label { color:var(--muted); font-size:.82rem; margin-top:.25rem; font-weight:500; }
+    .stat-icon { font-size:1.5rem; margin-bottom:.5rem; }
+
+    /* ── Creator card ── */
     .creator-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 22px;
-        padding: 2rem;
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-        margin-bottom: 2rem;
+        background:var(--surface); border:1px solid var(--border);
+        border-radius:24px; padding:2rem; margin-bottom:2rem;
+        display:flex; align-items:center; gap:1.75rem; flex-wrap:wrap;
+        position:relative; overflow:hidden;
+        transition:transform .25s, box-shadow .25s;
     }
+    .creator-card:hover { transform:translateY(-4px); box-shadow:0 24px 60px rgba(0,0,0,.3); }
+    .creator-card::after {
+        content:''; position:absolute; inset:0; pointer-events:none;
+        background:linear-gradient(135deg,rgba(96,165,250,.06),transparent 60%);
+    }
+    .creator-avatar-wrap { position:relative; flex-shrink:0; }
     .creator-avatar {
-        width: 72px; height: 72px; border-radius: 50%;
-        background: linear-gradient(135deg, var(--accent-dark), var(--accent));
-        display: grid; place-items: center;
-        font-size: 1.8rem; font-weight: 800; color: #fff;
-        flex-shrink: 0;
-        border: 3px solid rgba(96,165,250,0.3);
+        width:80px; height:80px; border-radius:50%;
+        background:linear-gradient(135deg,var(--accent-dark),var(--accent));
+        display:grid; place-items:center;
+        font-size:2rem; font-weight:900; color:#fff;
+        border:3px solid rgba(96,165,250,.35);
+        animation:pulseRing 3s ease-out infinite;
+        position:relative; z-index:1;
     }
-    .creator-name { font-size: 1.2rem; font-weight: 800; }
-    .creator-role { color: var(--accent); font-size: 0.88rem; font-weight: 600; margin-top: 0.2rem; }
-    .creator-bio { color: var(--muted); font-size: 0.9rem; line-height: 1.65; margin-top: 0.5rem; }
+    .creator-ring {
+        position:absolute; inset:-6px; border-radius:50%;
+        border:2px dashed rgba(96,165,250,.3);
+        animation:spin 10s linear infinite;
+    }
+    .creator-name { font-size:1.35rem; font-weight:800; }
+    .creator-role {
+        display:inline-flex; align-items:center; gap:.4rem;
+        color:var(--accent); font-size:.88rem; font-weight:600;
+        margin-top:.25rem; margin-bottom:.6rem;
+    }
+    .creator-bio { color:var(--muted); font-size:.9rem; line-height:1.7; max-width:520px; }
 
-    .contact-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 22px;
-        padding: 2rem;
+    /* ── Feature grid ── */
+    .feature-grid {
+        display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+        gap:1.1rem; margin-bottom:2rem;
     }
-    .contact-card h2 {
-        font-size: 1.2rem; font-weight: 700;
-        margin-bottom: 0.4rem;
+    .feature-card {
+        background:var(--surface); border:1px solid var(--border);
+        border-radius:20px; padding:1.5rem;
+        transition:transform .2s, box-shadow .2s, border-color .2s;
+        cursor:default;
     }
-    .contact-card > p { color: var(--muted); margin-bottom: 1.5rem; font-size: 0.92rem; }
-    .form-grid { display: grid; gap: 1rem; }
-    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    @media (max-width: 560px) { .form-row-2 { grid-template-columns: 1fr; } }
+    .feature-card:hover {
+        transform:translateY(-5px);
+        box-shadow:0 20px 50px rgba(0,0,0,.3);
+        border-color:rgba(96,165,250,.35);
+    }
+    .feature-icon {
+        font-size:2rem; margin-bottom:.75rem; display:block;
+        transition:transform .3s;
+    }
+    .feature-card:hover .feature-icon { transform:scale(1.2) rotate(-5deg); }
+    .feature-card h3 { font-size:1rem; font-weight:700; margin-bottom:.6rem; }
+    .feature-card p, .feature-card li { color:var(--muted); font-size:.875rem; line-height:1.7; }
+    .feature-card ul { padding-left:1.1rem; display:grid; gap:.3rem; margin:0; }
+
+    /* ── Tech stack ── */
+    .tech-wrap { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:.75rem; }
+    .tech-chip {
+        display:inline-flex; align-items:center; gap:.4rem;
+        padding:.38rem .9rem; border-radius:999px;
+        border:1px solid var(--border); background:var(--surface2);
+        color:var(--muted); font-size:.8rem; font-weight:500;
+        transition:all .2s; cursor:default;
+    }
+    .tech-chip:hover {
+        background:rgba(96,165,250,.14);
+        border-color:rgba(96,165,250,.4); color:var(--accent);
+        transform:translateY(-2px);
+    }
+
+    /* ── Contact ── */
+    .contact-section {
+        background:var(--surface); border:1px solid var(--border);
+        border-radius:24px; padding:2.5rem; margin-bottom:2rem;
+        position:relative; overflow:hidden;
+    }
+    .contact-section::before {
+        content:''; position:absolute; right:-80px; top:-80px;
+        width:250px; height:250px; border-radius:50%;
+        background:radial-gradient(circle,rgba(96,165,250,.12),transparent 70%);
+        pointer-events:none;
+    }
+    .contact-header { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; }
+    .contact-icon-wrap {
+        width:52px; height:52px; border-radius:16px; flex-shrink:0;
+        background:linear-gradient(135deg,var(--accent-dark),var(--accent));
+        display:grid; place-items:center; font-size:1.4rem;
+    }
+    .contact-title { font-size:1.3rem; font-weight:800; }
+    .contact-sub { color:var(--muted); font-size:.9rem; }
+
+    .form-grid { display:grid; gap:1.1rem; }
+    .form-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; }
+    @media(max-width:560px){ .form-row-2{grid-template-columns:1fr;} }
+
+    .form-input:focus,.form-select:focus,.form-textarea:focus {
+        outline:none; border-color:var(--accent);
+        box-shadow:0 0 0 3px rgba(96,165,250,.12);
+    }
+    .send-btn {
+        display:inline-flex; align-items:center; gap:.6rem;
+        padding:.85rem 1.6rem; border-radius:14px;
+        background:linear-gradient(135deg,var(--accent-dark),var(--accent));
+        color:#fff; font-weight:700; font-size:.95rem;
+        border:none; cursor:pointer;
+        transition:opacity .15s, transform .15s, box-shadow .15s;
+        box-shadow:0 8px 24px rgba(37,99,235,.35);
+    }
+    .send-btn:hover { opacity:.88; transform:translateY(-2px); box-shadow:0 12px 32px rgba(37,99,235,.45); }
+    .send-btn:active { transform:translateY(0); }
+    .send-icon { transition:transform .25s; }
+    .send-btn:hover .send-icon { transform:translateX(4px) rotate(-20deg); }
 
     .success-banner {
-        background: rgba(74,222,128,0.12);
-        border: 1px solid rgba(74,222,128,0.25);
-        border-radius: 14px;
-        padding: 1rem 1.25rem;
-        color: var(--green);
-        font-weight: 600;
-        display: flex; align-items: center; gap: 0.6rem;
-        margin-bottom: 1.5rem;
+        background:rgba(74,222,128,.1); border:1px solid rgba(74,222,128,.25);
+        border-radius:14px; padding:1rem 1.25rem; color:var(--green);
+        font-weight:600; display:flex; align-items:center; gap:.65rem;
+        margin-bottom:1.5rem; animation:scaleIn .4s ease;
     }
-    .tech-tag {
-        display: inline-flex; align-items: center; gap: 0.35rem;
-        padding: 0.3rem 0.75rem; border-radius: 999px;
-        background: rgba(96,165,250,0.12); color: var(--accent);
-        font-size: 0.8rem; font-weight: 500;
+    .error-banner {
+        background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.25);
+        border-radius:14px; padding:1rem 1.25rem; color:#fca5a5;
+        font-weight:600; margin-bottom:1.5rem; animation:scaleIn .4s ease;
     }
-    .tech-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+
+    /* ── Section header ── */
+    .section-head { margin-bottom:1.25rem; }
+    .section-head h2 { font-size:1.35rem; font-weight:800; }
+    .section-head p { color:var(--muted); font-size:.9rem; margin-top:.3rem; }
+
+    @media(max-width:640px){ .hero-wrap{padding:2rem 1.25rem;} .contact-section{padding:1.5rem;} }
 </style>
 {% endblock %}
 {% block body %}
 <div class="page">
 
-    <div class="about-hero">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="EventMate" class="about-logo">
-        <div class="about-hero-text">
-            <h1>About <span>EventMate</span></h1>
-            <p>EventMate is a platform built to help international students across North Rhine-Westphalia, Germany, discover local events, connect with like-minded people, and feel at home in a new country.</p>
+    <!-- ── HERO ── -->
+    <div class="hero-wrap reveal">
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-logo-wrap">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="EventMate" class="hero-logo">
+        </div>
+        <div class="hero-text">
+            <div class="hero-badge"><span class="hero-badge-dot"></span> Built for International Students</div>
+            <h1 class="hero-title">About <span class="highlight"><span id="typewriter"></span></span></h1>
+            <p class="hero-sub">EventMate connects students across North Rhine-Westphalia with local events, communities, and people who share their passions — making every city feel like home.</p>
         </div>
     </div>
 
-    <div class="creator-card">
-        <div class="creator-avatar">M</div>
+    <!-- ── STATS ── -->
+    <div class="stats-row">
+        <div class="stat-card reveal reveal-delay-1">
+            <div class="stat-icon">🗓️</div>
+            <div class="stat-num" data-target="510">0</div>
+            <div class="stat-label">Events Listed</div>
+        </div>
+        <div class="stat-card reveal reveal-delay-2">
+            <div class="stat-icon">🏙️</div>
+            <div class="stat-num" data-target="51">0</div>
+            <div class="stat-label">German Cities</div>
+        </div>
+        <div class="stat-card reveal reveal-delay-3">
+            <div class="stat-icon">🏷️</div>
+            <div class="stat-num" data-target="15">0</div>
+            <div class="stat-label">Categories</div>
+        </div>
+        <div class="stat-card reveal reveal-delay-4">
+            <div class="stat-icon">💬</div>
+            <div class="stat-num" data-target="100">0</div>
+            <div class="stat-label">% Free to Use</div>
+        </div>
+    </div>
+
+    <!-- ── CREATOR ── -->
+    <div class="creator-card reveal">
+        <div class="creator-avatar-wrap">
+            <div class="creator-ring"></div>
+            <div class="creator-avatar">M</div>
+        </div>
         <div>
             <div class="creator-name">Mohammed Omar Abdullah</div>
-            <div class="creator-role">Creator & Developer</div>
-            <div class="creator-bio">
-                Passionate about building tools that help international students integrate and thrive. EventMate was created to bridge the gap between newcomers and local community events in NRW, Germany.
+            <div class="creator-role">⚡ Creator &amp; Developer</div>
+            <div class="creator-bio">Passionate about building tools that help international students integrate and thrive. EventMate was created to bridge the gap between newcomers and local community events in NRW, Germany — one connection at a time.</div>
+        </div>
+    </div>
+
+    <!-- ── FEATURE CARDS ── -->
+    <div class="section-head reveal">
+        <h2>What makes EventMate special</h2>
+        <p>Everything you need to discover, join, and connect — in one place.</p>
+    </div>
+    <div class="feature-grid">
+        <div class="feature-card reveal reveal-delay-1">
+            <span class="feature-icon">🔍</span>
+            <h3>Smart Discovery</h3>
+            <p>Search 510+ events by title, city, language or category. Category chips let you filter instantly without reloading.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-2">
+            <span class="feature-icon">🤝</span>
+            <h3>Like-Minded Matching</h3>
+            <p>Every event attendee list highlights shared interests and languages — so you know who to say hello to before you arrive.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-3">
+            <span class="feature-icon">💬</span>
+            <h3>Group Chat</h3>
+            <p>Every event has its own group chat — only visible to members who joined. Real-time polling keeps the conversation flowing.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-1">
+            <span class="feature-icon">📋</span>
+            <h3>Organiser Dashboard</h3>
+            <p>Create and manage your events, track attendees, upload banners, and edit details — all from a clean dashboard.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-2">
+            <span class="feature-icon">👤</span>
+            <h3>Student Profiles</h3>
+            <p>Set your university, study program, languages, and interests. Your profile helps others find common ground with you.</p>
+        </div>
+        <div class="feature-card reveal reveal-delay-3">
+            <span class="feature-icon">🛠️</span>
+            <h3>Tech Stack</h3>
+            <div class="tech-wrap">
+                <span class="tech-chip">🐍 Python</span>
+                <span class="tech-chip">⚗️ Flask</span>
+                <span class="tech-chip">🗄️ SQLAlchemy</span>
+                <span class="tech-chip">🗃️ SQLite</span>
+                <span class="tech-chip">🎨 CSS</span>
+                <span class="tech-chip">⚡ JavaScript</span>
+                <span class="tech-chip">🔐 Werkzeug</span>
             </div>
         </div>
     </div>
 
-    <div class="two-col">
-        <div class="info-card">
-            <h2>🎯 Our Mission</h2>
-            <p>We believe every international student deserves to feel connected. EventMate makes it easy to discover cultural events, workshops, sports meetups, and more — all in one place, with a community of fellow students who share your interests.</p>
-        </div>
-        <div class="info-card">
-            <h2>✨ Key Features</h2>
-            <ul>
-                <li>Browse 500+ events across 51 German cities</li>
-                <li>Filter by category, city, and language</li>
-                <li>Join events and see who else is attending</li>
-                <li>Group chat for every joined event</li>
-                <li>Connect with like-minded students</li>
-                <li>Create and manage your own events</li>
-                <li>Personal profile with interests & languages</li>
-            </ul>
-        </div>
-        <div class="info-card">
-            <h2>🛠️ Built With</h2>
-            <p>EventMate is a full-stack web application built with modern tools.</p>
-            <div class="tech-row">
-                <span class="tech-tag">🐍 Python / Flask</span>
-                <span class="tech-tag">🗄️ SQLAlchemy</span>
-                <span class="tech-tag">🗃️ SQLite</span>
-                <span class="tech-tag">🎨 Vanilla CSS</span>
-                <span class="tech-tag">⚡ JavaScript</span>
-                <span class="tech-tag">🔐 Werkzeug Auth</span>
+    <!-- ── CONTACT ── -->
+    <div class="contact-section reveal" id="contact">
+        <div class="contact-header">
+            <div class="contact-icon-wrap">✉️</div>
+            <div>
+                <div class="contact-title">Get in Touch</div>
+                <div class="contact-sub">Have a question or idea? Mohammed will get back to you.</div>
             </div>
         </div>
-        <div class="info-card">
-            <h2>🌍 Who It's For</h2>
-            <p>EventMate is designed for international students studying in North Rhine-Westphalia — but anyone curious about local events in Germany is welcome to explore and join.</p>
-        </div>
-    </div>
-
-    <div class="contact-card">
-        <h2>📬 Get in Touch</h2>
-        <p>Have a question, suggestion, or want to collaborate? Send a message and Mohammed will get back to you.</p>
 
         {% if sent %}
-        <div class="success-banner">✅ Message sent! Thank you for reaching out.</div>
+        <div class="success-banner">
+            <span style="font-size:1.2rem;">🎉</span>
+            Message sent! Thank you for reaching out — we'll be in touch soon.
+        </div>
         {% endif %}
 
         {% if error %}
-        <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:14px;padding:1rem 1.25rem;color:#fca5a5;font-weight:600;margin-bottom:1.5rem;">
-            {{ error }}
-        </div>
+        <div class="error-banner">⚠️ {{ error }}</div>
         {% endif %}
 
-        <form method="post" action="/about">
+        <form method="post" action="/about#contact" id="contactForm">
             <div class="form-grid">
                 <div class="form-row-2">
                     <div class="form-group">
@@ -192,18 +377,73 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Subject *</label>
-                    <input class="form-input" type="text" name="subject" placeholder="e.g. Feature suggestion" required value="{{ form.subject if form else '' }}">
+                    <input class="form-input" type="text" name="subject" placeholder="e.g. Feature suggestion, Bug report, Collaboration" required value="{{ form.subject if form else '' }}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Message *</label>
                     <textarea class="form-textarea" name="message" placeholder="Write your message here..." required style="min-height:140px;">{{ form.message if form else '' }}</textarea>
                 </div>
                 <div style="display:flex;justify-content:flex-end;">
-                    <button type="submit" class="btn btn-primary">Send Message ✉️</button>
+                    <button type="submit" class="send-btn">
+                        Send Message <span class="send-icon">✉️</span>
+                    </button>
                 </div>
             </div>
         </form>
     </div>
 
 </div>
+
+<script>
+/* ── Typewriter ── */
+const words = ['EventMate', 'Community', 'Connection', 'Adventure'];
+let wi = 0, ci = 0, deleting = false;
+const tw = document.getElementById('typewriter');
+function type() {
+    const word = words[wi];
+    if (!deleting) {
+        tw.textContent = word.slice(0, ++ci);
+        if (ci === word.length) { deleting = true; setTimeout(type, 1800); return; }
+    } else {
+        tw.textContent = word.slice(0, --ci);
+        if (ci === 0) { deleting = false; wi = (wi + 1) % words.length; }
+    }
+    setTimeout(type, deleting ? 55 : 95);
+}
+type();
+
+/* ── Scroll-reveal ── */
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+/* ── Animated counters ── */
+function animateCounter(el) {
+    const target = parseInt(el.dataset.target);
+    const duration = 1400;
+    const step = target / (duration / 16);
+    let current = 0;
+    const timer = setInterval(() => {
+        current = Math.min(current + step, target);
+        el.textContent = Math.floor(current) + (el.dataset.target === '100' ? '%' : '+');
+        if (current >= target) { el.textContent = target + (el.dataset.target === '100' ? '%' : '+'); clearInterval(timer); }
+    }, 16);
+}
+const statObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+        if (e.isIntersecting) {
+            animateCounter(e.target);
+            statObserver.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.5 });
+document.querySelectorAll('.stat-num[data-target]').forEach(el => statObserver.observe(el));
+
+/* ── Form shake on empty submit ── */
+document.getElementById('contactForm').addEventListener('submit', function(e) {
+    const btn = this.querySelector('.send-btn');
+    btn.textContent = 'Sending…';
+});
+</script>
 {% endblock %}
