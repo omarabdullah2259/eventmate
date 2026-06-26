@@ -152,15 +152,18 @@
         </div>
     </section>
 
-    <div class="section-title">
-        {% if events %}{{ events|length }} event{{ 's' if events|length != 1 }}{% if active_category %} in {{ active_category }}{% endif %}{% if active_q %} matching "{{ active_q }}"{% endif %}
+    <div class="section-title" id="resultsLabel">
+        {% if total_filtered %}
+            {{ total_filtered }} event{{ 's' if total_filtered != 1 }}
+            {% if active_category %} in {{ active_category }}{% endif %}
+            {% if active_q %} matching "{{ active_q }}"{% endif %}
         {% else %}No events found{% endif %}
     </div>
 
     {% if events %}
-    <section class="events-grid">
+    <section class="events-grid" id="eventsGrid">
         {% for event in events %}
-        <article class="event-card">
+        <article class="event-card" data-id="{{ event.id }}">
             <div class="event-banner">
                 {% if event.banner %}
                     <img src="{{ url_for('static', filename='uploads/' + event.banner) }}" alt="{{ event.title }}">
@@ -206,6 +209,22 @@
         </article>
         {% endfor %}
     </section>
+
+    {% if has_more %}
+    <div id="loadMoreWrap" style="text-align:center;margin-top:2rem;">
+        <div id="loadedCount" style="color:var(--muted);font-size:0.85rem;margin-bottom:0.75rem;">
+            Showing <span id="shownCount">{{ events|length }}</span> of {{ total_filtered }} events
+        </div>
+        <div style="width:280px;height:4px;border-radius:999px;background:rgba(255,255,255,0.07);margin:0 auto 1.25rem;overflow:hidden;">
+            <div id="progressBar" style="height:100%;border-radius:999px;background:linear-gradient(to right,var(--accent-dark),var(--accent));width:{{ ((events|length / total_filtered)*100)|int }}%;transition:width .4s ease;"></div>
+        </div>
+        <button id="loadMoreBtn" class="btn btn-ghost" style="min-width:180px;gap:0.6rem;" onclick="loadMore()">
+            <span id="loadMoreLabel">Load More Events</span>
+            <span id="loadMoreIcon">↓</span>
+        </button>
+    </div>
+    {% endif %}
+
     {% else %}
     <div class="no-events">
         <h3>No events found</h3>
@@ -214,5 +233,160 @@
         <a href="/" class="btn btn-ghost" style="display:inline-flex;">Clear filters</a>
     </div>
     {% endif %}
+
+<script>
+const GUEST       = {{ 'true' if guest else 'false' }};
+const PER_PAGE    = {{ per_page }};
+const TOTAL       = {{ total_filtered }};
+let   currentPage = 1;
+let   loading     = false;
+
+const params = {
+    q:        {{ ('"' ~ active_q ~ '"') if active_q else '""' }},
+    category: {{ ('"' ~ active_category ~ '"') if active_category else '""' }},
+    city:     {{ ('"' ~ active_city ~ '"') if active_city else '""' }},
+    language: {{ ('"' ~ active_language ~ '"') if active_language else '""' }},
+};
+
+function esc(s) {
+    return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildCard(ev, joinedIds) {
+    const joined  = joinedIds.includes(ev.id);
+    const pct     = ev.max_participants ? Math.min(Math.round(ev.attendee_count / ev.max_participants * 100), 100) : 0;
+    const full    = ev.max_participants && ev.attendee_count >= ev.max_participants;
+    const bannerHtml = ev.banner
+        ? `<img src="/static/uploads/${esc(ev.banner)}" alt="${esc(ev.title)}">`
+        : `<div class="event-banner-gradient" style="background:${esc(ev.category_color)};"></div>`;
+
+    let actionHtml;
+    if (GUEST) {
+        actionHtml = `<a class="btn btn-ghost btn-sm" href="/login">Login to join</a>`;
+    } else if (joined) {
+        actionHtml = `<span class="joined-badge">✓ Joined</span>`;
+    } else if (full) {
+        actionHtml = `<span class="pill" style="font-size:0.82rem;">Full</span>`;
+    } else {
+        actionHtml = `<a class="btn btn-green btn-sm" href="/join/${ev.id}">Join</a>`;
+    }
+
+    const descHtml = ev.description
+        ? `<div style="color:var(--muted);font-size:0.875rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(ev.description)}</div>`
+        : '';
+
+    const langHtml = ev.language
+        ? `<span class="event-pill">🗣️ ${esc(ev.language)}</span>` : '';
+
+    const timeStr = ev.time ? ` · ${esc(ev.time)}` : '';
+    const maxStr  = ev.max_participants ? ` / ${ev.max_participants}` : '';
+
+    return `
+    <article class="event-card card-enter" data-id="${ev.id}">
+        <div class="event-banner">
+            ${bannerHtml}
+            <span class="banner-cat">${esc(ev.category_icon)} ${esc(ev.category || 'Event')}</span>
+        </div>
+        <div class="event-body">
+            <div class="event-title">${esc(ev.title)}</div>
+            <div class="event-pills">
+                <span class="event-pill">📅 ${esc(ev.date)}${timeStr}</span>
+                <span class="event-pill">📍 ${esc(ev.location)}</span>
+                ${langHtml}
+            </div>
+            ${descHtml}
+            <div class="attendee-bar">
+                <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+                <span class="attendee-text">${ev.attendee_count}${maxStr} joined</span>
+            </div>
+            <div class="event-footer">
+                <a class="btn btn-primary btn-sm" href="/event/${ev.id}">View Event</a>
+                ${actionHtml}
+            </div>
+        </div>
+    </article>`;
+}
+
+async function loadMore() {
+    if (loading) return;
+    loading = true;
+
+    const btn   = document.getElementById('loadMoreBtn');
+    const label = document.getElementById('loadMoreLabel');
+    const icon  = document.getElementById('loadMoreIcon');
+
+    label.textContent = 'Loading…';
+    icon.style.animation = 'spin .7s linear infinite';
+    btn.disabled = true;
+
+    const qs = new URLSearchParams({
+        page: currentPage + 1,
+        q:    params.q,
+        category: params.category,
+        city:     params.city,
+        language: params.language,
+    });
+
+    try {
+        const res  = await fetch(`/events/more?${qs}`);
+        const data = await res.json();
+
+        if (data.ok && data.events.length) {
+            currentPage++;
+            const grid = document.getElementById('eventsGrid');
+            data.events.forEach(ev => {
+                grid.insertAdjacentHTML('beforeend', buildCard(ev, data.joined_ids));
+            });
+
+            /* animate new cards in */
+            grid.querySelectorAll('.card-enter').forEach((c, i) => {
+                c.style.opacity = '0';
+                c.style.transform = 'translateY(20px)';
+                requestAnimationFrame(() => {
+                    c.style.transition = `opacity .35s ease ${i * 40}ms, transform .35s ease ${i * 40}ms`;
+                    c.style.opacity = '1';
+                    c.style.transform = 'translateY(0)';
+                    setTimeout(() => c.classList.remove('card-enter'), 500 + i * 40);
+                });
+            });
+
+            const shown = grid.querySelectorAll('.event-card').length;
+            document.getElementById('shownCount').textContent = shown;
+
+            /* progress bar */
+            const pct = Math.min(Math.round(shown / TOTAL * 100), 100);
+            document.getElementById('progressBar').style.width = pct + '%';
+
+            if (!data.has_more) {
+                document.getElementById('loadMoreWrap').innerHTML =
+                    `<p style="color:var(--muted);font-size:0.9rem;margin-top:0.5rem;">🎉 All ${TOTAL} events loaded</p>`;
+                return;
+            }
+        }
+    } catch (e) {
+        label.textContent = 'Error — retry';
+    } finally {
+        loading = false;
+        if (btn.parentElement) {
+            label.textContent = 'Load More Events';
+            icon.style.animation = '';
+            btn.disabled = false;
+        }
+    }
+}
+
+/* infinite scroll trigger when near bottom */
+window.addEventListener('scroll', () => {
+    const btn = document.getElementById('loadMoreBtn');
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    if (rect.top < window.innerHeight + 300) loadMore();
+}, { passive: true });
+</script>
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 </div>
 {% endblock %}

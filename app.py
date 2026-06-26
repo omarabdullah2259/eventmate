@@ -343,7 +343,9 @@ def index():
     if active_language:
         query = query.filter(Event.language.ilike(f'%{active_language}%'))
 
-    events = query.order_by(Event.date).all()
+    PER_PAGE = 24
+    total_filtered = query.count()
+    events = query.order_by(Event.date).limit(PER_PAGE).all()
     joined_event_ids = [ej.event_id for ej in user.joined_events] if user else []
 
     return render_template(
@@ -360,7 +362,49 @@ def index():
         active_language=active_language,
         total_events=Event.query.count(),
         total_users=User.query.count(),
+        total_filtered=total_filtered,
+        has_more=total_filtered > PER_PAGE,
+        per_page=PER_PAGE,
     )
+
+
+@app.route('/events/more')
+def events_more():
+    PER_PAGE = 24
+    page   = request.args.get('page', 1, type=int)
+    q      = request.args.get('q', '').strip()
+    cat    = request.args.get('category', '').strip()
+    city   = request.args.get('city', '').strip()
+    lang   = request.args.get('language', '').strip()
+
+    user  = get_current_user()
+    guest = session.get('guest')
+    joined_ids = [ej.event_id for ej in user.joined_events] if user else []
+
+    query = Event.query
+    if q:
+        query = query.filter(Event.title.ilike(f'%{q}%'))
+    if cat:
+        query = query.filter(Event.category == cat)
+    if city:
+        query = query.filter(Event.location.ilike(f'%{city}%'))
+    if lang:
+        query = query.filter(Event.language.ilike(f'%{lang}%'))
+
+    total   = query.count()
+    offset  = (page - 1) * PER_PAGE
+    events  = query.order_by(Event.date).offset(offset).limit(PER_PAGE).all()
+    has_more = (offset + PER_PAGE) < total
+
+    return jsonify({
+        'ok': True,
+        'events': [e.to_dict() for e in events],
+        'has_more': has_more,
+        'total': total,
+        'page': page,
+        'guest': bool(guest),
+        'joined_ids': joined_ids,
+    })
 
 
 @app.route('/event/<int:event_id>')
