@@ -148,6 +148,57 @@
             </div>
             {% endif %}
 
+            <!-- ⭐ Reviews Section -->
+            <div style="margin-bottom:2rem;">
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+                    <span style="font-size:1.1rem;font-weight:700;">⭐ Reviews</span>
+                    {% if avg_rating %}
+                        <span style="background:rgba(250,204,21,.15);border:1px solid rgba(250,204,21,.3);border-radius:999px;padding:0.25rem 0.75rem;font-size:0.85rem;font-weight:700;color:#fbbf24;">
+                            {{ avg_rating }} / 5 &nbsp;({{ reviews|length }})
+                        </span>
+                    {% else %}
+                        <span style="color:var(--muted);font-size:0.88rem;">No reviews yet</span>
+                    {% endif %}
+                </div>
+
+                {% if joined and not guest and not user_reviewed %}
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:1.25rem;margin-bottom:1.25rem;" id="reviewForm">
+                    <div style="font-weight:700;margin-bottom:0.75rem;font-size:0.95rem;">Leave a Review</div>
+                    <div style="margin-bottom:0.75rem;">
+                        <div style="display:flex;gap:0.4rem;font-size:1.6rem;" id="starRow">
+                            {% for s in range(1,6) %}
+                            <span data-v="{{ s }}" style="cursor:pointer;opacity:.35;transition:opacity .15s,transform .15s;" onmouseover="hoverStars({{ s }})" onmouseout="resetStars()" onclick="pickStar({{ s }})">★</span>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" id="ratingVal" value="">
+                    </div>
+                    <textarea id="reviewComment" placeholder="What did you think of this event? (optional)" style="width:100%;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:13px;background:var(--surface2);color:var(--text);font-size:0.9rem;font-family:inherit;resize:vertical;min-height:80px;"></textarea>
+                    <div style="display:flex;justify-content:flex-end;margin-top:0.75rem;">
+                        <button onclick="submitReview({{ event.id }})" class="btn btn-primary btn-sm">Submit Review</button>
+                    </div>
+                    <div id="reviewError" style="color:#fca5a5;font-size:0.85rem;margin-top:0.5rem;display:none;"></div>
+                </div>
+                {% endif %}
+
+                <div id="reviewsList">
+                    {% for r in reviews %}
+                    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1rem 1.2rem;margin-bottom:0.75rem;">
+                        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+                            <div style="width:34px;height:34px;border-radius:50%;background:var(--accent-dark);display:grid;place-items:center;font-weight:700;color:#fff;font-size:0.85rem;overflow:hidden;flex-shrink:0;">
+                                {% if r.author_picture %}<img src="{{ url_for('static', filename='uploads/' + r.author_picture) }}" alt="" style="width:100%;height:100%;object-fit:cover;">{% else %}{{ r.author_name[0] | upper }}{% endif %}
+                            </div>
+                            <div>
+                                <div style="font-weight:700;font-size:0.9rem;">{{ r.author_name }}</div>
+                                <div style="font-size:0.78rem;color:var(--muted);">{{ r.timestamp }}</div>
+                            </div>
+                            <div style="margin-left:auto;font-size:1rem;color:#fbbf24;">{{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}</div>
+                        </div>
+                        {% if r.comment %}<p style="color:var(--muted);font-size:0.88rem;line-height:1.65;">{{ r.comment }}</p>{% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
             <div class="attendees-section">
                 <div class="attendees-title">
                     👥 Attendees
@@ -272,6 +323,53 @@
     </div>
 </div>
 <script>
+/* ── Star rating ── */
+let selectedStar = 0;
+function hoverStars(n) {
+    document.querySelectorAll('#starRow span').forEach((s,i) => {
+        s.style.opacity = i < n ? '1' : '.35';
+        s.style.transform = i < n ? 'scale(1.15)' : '';
+    });
+}
+function resetStars() {
+    document.querySelectorAll('#starRow span').forEach((s,i) => {
+        s.style.opacity = i < selectedStar ? '1' : '.35';
+        s.style.transform = '';
+    });
+}
+function pickStar(n) {
+    selectedStar = n;
+    document.getElementById('ratingVal').value = n;
+    hoverStars(n);
+}
+async function submitReview(eventId) {
+    const rating  = document.getElementById('ratingVal').value;
+    const comment = document.getElementById('reviewComment').value.trim();
+    const errEl   = document.getElementById('reviewError');
+    if (!rating) { errEl.textContent = 'Please select a star rating.'; errEl.style.display='block'; return; }
+    const fd = new FormData();
+    fd.append('rating', rating); fd.append('comment', comment);
+    const res  = await fetch(`/event/${eventId}/review`, { method:'POST', body:fd });
+    const data = await res.json();
+    if (!data.ok) { errEl.textContent = data.error; errEl.style.display='block'; return; }
+    document.getElementById('reviewForm').remove();
+    const r = data.review;
+    const stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+    const pic = r.author_picture
+        ? `<img src="/static/uploads/${r.author_picture}" alt="" style="width:100%;height:100%;object-fit:cover;">`
+        : r.author_name[0].toUpperCase();
+    document.getElementById('reviewsList').insertAdjacentHTML('afterbegin', `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1rem 1.2rem;margin-bottom:0.75rem;animation:fadeUp .4s ease both;">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+                <div style="width:34px;height:34px;border-radius:50%;background:var(--accent-dark);display:grid;place-items:center;font-weight:700;color:#fff;font-size:0.85rem;overflow:hidden;flex-shrink:0;">${pic}</div>
+                <div><div style="font-weight:700;font-size:0.9rem;">${r.author_name}</div><div style="font-size:0.78rem;color:var(--muted);">${r.timestamp}</div></div>
+                <div style="margin-left:auto;font-size:1rem;color:#fbbf24;">${stars}</div>
+            </div>
+            ${r.comment ? `<p style="color:var(--muted);font-size:0.88rem;line-height:1.65;">${r.comment}</p>` : ''}
+        </div>`);
+    showToast('Review submitted!', '⭐');
+}
+
 /* ── Share ── */
 function shareEvent() {
     const url = window.location.href;

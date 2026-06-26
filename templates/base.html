@@ -172,6 +172,21 @@
             {% if nav_user %}
                 <a href="/create_event" class="nbtn nbtn-accent">+ Create</a>
                 <a href="/bookmarks" class="nbtn nbtn-ghost" title="Saved Events">🔖</a>
+                <!-- Notification Bell -->
+                <div style="position:relative;">
+                    <button id="bellBtn" onclick="toggleNotifPanel()" style="position:relative;background:var(--surface2);border:1px solid var(--border);border-radius:11px;width:38px;height:38px;display:grid;place-items:center;cursor:pointer;font-size:1.1rem;transition:background .15s;" title="Notifications">🔔
+                        <span id="bellBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:999px;font-size:0.65rem;font-weight:800;min-width:17px;height:17px;display:none;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--bg);"></span>
+                    </button>
+                    <div id="notifPanel" style="display:none;position:absolute;right:0;top:calc(100% + 8px);width:320px;background:#0f1829;border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.5);z-index:500;overflow:hidden;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1.1rem;border-bottom:1px solid var(--border);">
+                            <span style="font-weight:800;font-size:0.95rem;">Notifications</span>
+                            <button onclick="markAllRead()" style="background:none;border:none;color:var(--accent);font-size:0.8rem;cursor:pointer;font-weight:600;">Mark all read</button>
+                        </div>
+                        <div id="notifList" style="max-height:360px;overflow-y:auto;padding:0.4rem 0;">
+                            <div style="padding:2rem;text-align:center;color:var(--muted);font-size:0.88rem;">Loading…</div>
+                        </div>
+                    </div>
+                </div>
                 <a href="/dashboard" class="nbtn nbtn-ghost">Dashboard</a>
                 <a href="/profile/{{ nav_user.id }}" class="nav-avatar" title="{{ nav_user.name }}">
                     {% if nav_user.profile_picture %}
@@ -218,6 +233,67 @@ function showToast(msg, emoji) {
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2800);
 }
+
+/* ── Notifications ── */
+let notifOpen = false;
+function toggleNotifPanel() {
+    const panel = document.getElementById('notifPanel');
+    notifOpen = !notifOpen;
+    panel.style.display = notifOpen ? 'block' : 'none';
+    if (notifOpen) loadNotifications();
+}
+document.addEventListener('click', e => {
+    if (notifOpen && !document.getElementById('bellBtn').contains(e.target) &&
+        !document.getElementById('notifPanel').contains(e.target)) {
+        notifOpen = false;
+        document.getElementById('notifPanel').style.display = 'none';
+    }
+});
+async function loadNotifications() {
+    try {
+        const res  = await fetch('/api/notifications');
+        const data = await res.json();
+        const list = document.getElementById('notifList');
+        const badge = document.getElementById('bellBadge');
+        if (data.unread > 0) {
+            badge.textContent = data.unread > 9 ? '9+' : data.unread;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+        if (!data.notifications.length) {
+            list.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted);font-size:0.88rem;">You\'re all caught up! 🎉</div>';
+            return;
+        }
+        list.innerHTML = data.notifications.map(n => `
+            <a href="${n.link || '#'}" style="display:block;padding:0.75rem 1.1rem;text-decoration:none;border-bottom:1px solid rgba(148,163,184,0.07);transition:background .15s;background:${n.is_read ? 'transparent' : 'rgba(96,165,250,0.06)'};" onmouseover="this.style.background='rgba(96,165,250,0.1)'" onmouseout="this.style.background='${n.is_read ? 'transparent' : 'rgba(96,165,250,0.06)'}'">
+                <div style="font-size:0.875rem;color:var(--text);line-height:1.4;">${n.message}</div>
+                <div style="font-size:0.75rem;color:var(--muted);margin-top:0.25rem;">${n.timestamp}</div>
+            </a>`).join('');
+    } catch(e) {}
+}
+async function markAllRead() {
+    await fetch('/api/notifications/read', { method: 'POST' });
+    document.getElementById('bellBadge').style.display = 'none';
+    loadNotifications();
+}
+/* Poll for new notifications every 30s */
+(async function pollNotifs() {
+    try {
+        const res  = await fetch('/api/notifications');
+        const data = await res.json();
+        const badge = document.getElementById('bellBadge');
+        if (badge) {
+            if (data.unread > 0) {
+                badge.textContent = data.unread > 9 ? '9+' : data.unread;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    } catch(e) {}
+    setTimeout(pollNotifs, 30000);
+})();
 </script>
 <footer style="text-align:center;padding:1.5rem 1rem 2rem;color:rgba(148,163,184,0.55);font-size:0.82rem;border-top:1px solid rgba(148,163,184,0.08);margin-top:2rem;">
     <div style="margin-bottom:0.5rem;">

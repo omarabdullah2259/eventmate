@@ -195,6 +195,25 @@ class Bookmark(db.Model):
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
 
 
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.String(300), nullable=False)
+    link = db.Column(db.String(200))
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    author = db.relationship('User', lazy=True)
+
+
 class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
@@ -473,6 +492,11 @@ def event_detail(event_id):
     if user:
         bookmarked = Bookmark.query.filter_by(user_id=user.id, event_id=event_id).first() is not None
 
+    reviews = Review.query.filter_by(event_id=event_id)\
+        .order_by(Review.timestamp.desc()).all()
+    avg_rating = round(sum(r.rating for r in reviews) / len(reviews), 1) if reviews else None
+    user_reviewed = bool(user and Review.query.filter_by(user_id=user.id, event_id=event_id).first())
+
     return render_template(
         'event_detail.html',
         event=event.to_dict(),
@@ -483,6 +507,14 @@ def event_detail(event_id):
         organizer=organizer,
         is_organizer=is_organizer,
         bookmarked=bookmarked,
+        reviews=[{
+            'id': r.id, 'rating': r.rating, 'comment': r.comment,
+            'author_name': r.author.name if r.author else 'Unknown',
+            'author_picture': r.author.profile_picture if r.author else None,
+            'timestamp': r.timestamp.strftime('%b %d, %Y'),
+        } for r in reviews],
+        avg_rating=avg_rating,
+        user_reviewed=user_reviewed,
     )
 
 
@@ -499,6 +531,12 @@ def join_event(event_id):
     if not existing:
         if event.max_participants is None or event.attendee_count() < event.max_participants:
             db.session.add(EventJoin(user_id=user.id, event_id=event_id))
+            if event.organizer_id and event.organizer_id != user.id:
+                _push_notification(
+                    event.organizer_id,
+                    f'🎉 {user.name} joined your event "{event.title}"',
+                    link=f'/event/{event.id}',
+                )
             db.session.commit()
     return redirect(url_for('event_detail', event_id=event_id))
 
@@ -517,6 +555,135 @@ def unjoin_event(event_id):
 @app.route('/find_people/<int:event_id>')
 def find_people(event_id):
     return redirect(url_for('event_detail', event_id=event_id))
+
+
+def _push_notification(user_id, message, link=None):
+    db.session.add(Notification(user_id=user_id, message=message, link=link))
+
+
+@app.route('/api/notifications')
+def api_notifications():
+    user = get_current_user()
+    if not user:
+        return jsonify({'ok': False, 'unread': 0, 'notifications': []})
+    notifs = Notification.query.filter_by(user_id=user.id)\
+        .order_by(Notification.timestamp.desc()).limit(30).all()
+    unread = sum(1 for n in notifs if not n.is_read)
+    return jsonify({
+        'ok': True,
+        'unread': unread,
+        'notifications': [{
+            'id': n.id,
+            'message': n.message,
+            'link': n.link,
+            'is_read': n.is_read,
+            'timestamp': n.timestamp.strftime('%b %d, %H:%M'),
+        } for n in notifs],
+    })
+
+
+@app.route('/api/notifications/read', methods=['POST'])
+def api_notifications_read():
+    user = get_current_user()
+    if not user:
+        return jsonify({'ok': False}), 401
+    Notification.query.filter_by(user_id=user.id, is_read=False)\
+        .update({'is_read': True})
+    db.session.commit()
+    return jsonify({'ok': True})
+
+
+@app.route('/api/search')
+def api_search():
+    q = request.args.get('q', '').strip()
+    if len(q) < 2:
+        return jsonify([])
+    results = Event.query.filter(Event.title.ilike(f'%{q}%'))\
+        .order_by(Event.title).limit(8).all()
+    return jsonify([{'id': e.id, 'title': e.title, 'location': e.location,
+                     'icon': CATEGORY_ICONS.get(e.category, '📅')} for e in results])
+
+
+@app.route('/event/<int:event_id>/review', methods=['POST'])
+@login_required
+def submit_review(event_id):
+    user = get_current_user()
+    Event.query.get_or_404(event_id)
+    joined = EventJoin.query.filter_by(user_id=user.id, event_id=event_id).first()
+    if not joined:
+        return jsonify({'ok': False, 'error': 'Join the event first to leave a review.'}), 403
+    existing = Review.query.filter_by(user_id=user.id, event_id=event_id).first()
+    if existing:
+        return jsonify({'ok': False, 'error': 'You have already reviewed this event.'}), 409
+    rating = request.form.get('rating', type=int)
+    comment = request.form.get('comment', '').strip()
+    if not rating or rating < 1 or rating > 5:
+        return jsonify({'ok': False, 'error': 'Invalid rating.'}), 400
+    rev = Review(user_id=user.id, event_id=event_id, rating=rating, comment=comment)
+    db.session.add(rev)
+    db.session.commit()
+    db.session.refresh(rev)
+    return jsonify({'ok': True, 'review': {
+        'id': rev.id,
+        'rating': rev.rating,
+        'comment': rev.comment,
+        'author_name': user.name,
+        'author_picture': user.profile_picture,
+        'timestamp': rev.timestamp.strftime('%b %d, %Y'),
+    }})
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        step = request.form.get('step', '1')
+        if step == '1':
+            username = request.form.get('username', '').strip()
+            user = User.query.filter_by(username=username, auth_method='password').first()
+            if not user:
+                return render_template('forgot_password.html', step=1,
+                                       error='No account found with that username.')
+            return render_template('forgot_password.html', step=2,
+                                   username=username,
+                                   hint=f'First name: {user.first_name[0]}***')
+        elif step == '2':
+            username = request.form.get('username', '').strip()
+            first_name = request.form.get('first_name', '').strip()
+            last_name = request.form.get('last_name', '').strip()
+            user = User.query.filter_by(username=username, auth_method='password').first()
+            if not user or user.first_name.lower() != first_name.lower() or user.last_name.lower() != last_name.lower():
+                return render_template('forgot_password.html', step=2,
+                                       username=username, hint='',
+                                       error='Name does not match our records.')
+            return render_template('forgot_password.html', step=3, username=username)
+        elif step == '3':
+            username = request.form.get('username', '').strip()
+            new_pass = request.form.get('new_password', '').strip()
+            confirm = request.form.get('confirm_password', '').strip()
+            user = User.query.filter_by(username=username, auth_method='password').first()
+            if not user:
+                return redirect(url_for('forgot_password'))
+            if len(new_pass) < 6:
+                return render_template('forgot_password.html', step=3, username=username,
+                                       error='Password must be at least 6 characters.')
+            if new_pass != confirm:
+                return render_template('forgot_password.html', step=3, username=username,
+                                       error='Passwords do not match.')
+            user.password_hash = generate_password_hash(new_pass)
+            db.session.commit()
+            return render_template('forgot_password.html', step='done')
+    return render_template('forgot_password.html', step=1)
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template('404.html', code=403, title='Access Denied',
+                           message='You do not have permission to view this page.'), 403
 
 
 @app.route('/bookmark/<int:event_id>', methods=['POST'])
@@ -637,6 +804,14 @@ def event_chat_send(event_id):
 
     msg = ChatMessage(event_id=event_id, user_id=user.id, message=text)
     db.session.add(msg)
+    members = EventJoin.query.filter_by(event_id=event_id).all()
+    for m in members:
+        if m.user_id != user.id:
+            _push_notification(
+                m.user_id,
+                f'💬 {user.name} sent a message in "{event.title}"',
+                link=f'/event/{event.id}/chat',
+            )
     db.session.commit()
     db.session.refresh(msg)
 
