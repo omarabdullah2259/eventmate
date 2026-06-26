@@ -152,6 +152,37 @@
         </div>
     </section>
 
+    <!-- 🔥 Trending Section -->
+    {% if trending and not active_q and not active_category and not active_city and not active_language %}
+    <section style="margin-bottom:2rem;">
+        <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
+            <span style="font-size:1.15rem;font-weight:800;">🔥 Trending Now</span>
+            <span style="color:var(--muted);font-size:0.82rem;font-weight:500;">Most popular events this week</span>
+        </div>
+        <div style="display:flex;gap:0.85rem;overflow-x:auto;padding-bottom:0.5rem;scrollbar-width:none;">
+            {% for event in trending %}
+            <a href="/event/{{ event.id }}" style="text-decoration:none;flex-shrink:0;width:200px;">
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:transform .2s,box-shadow .2s;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 16px 40px rgba(0,0,0,.35)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="height:80px;position:relative;">
+                        {% if event.banner %}
+                            <img src="{{ url_for('static', filename='uploads/' + event.banner) }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+                        {% else %}
+                            <div style="width:100%;height:100%;background:{{ event.category_color }};display:grid;place-items:center;font-size:1.8rem;">{{ event.category_icon }}</div>
+                        {% endif %}
+                        <span style="position:absolute;top:0.5rem;left:0.5rem;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);border-radius:999px;padding:0.2rem 0.55rem;font-size:0.72rem;font-weight:700;color:#fff;">🔥 #{{ loop.index }}</span>
+                    </div>
+                    <div style="padding:0.75rem;">
+                        <div style="font-size:0.88rem;font-weight:700;line-height:1.3;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ event.title }}</div>
+                        <div style="font-size:0.75rem;color:var(--muted);margin-top:0.3rem;">📍 {{ event.location }}</div>
+                        <div style="font-size:0.75rem;color:var(--muted);">👥 {{ event.attendee_count }} joined</div>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <div class="section-title" id="resultsLabel">
         {% if total_filtered %}
             {{ total_filtered }} event{{ 's' if total_filtered != 1 }}

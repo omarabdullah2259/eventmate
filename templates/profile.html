@@ -48,6 +48,38 @@
         <a href="/" style="color:var(--muted);text-decoration:none;font-size:0.9rem;">← Back to events</a>
     </div>
 
+    {% if is_own %}
+    {% set filled = [] %}
+    {% if profile_user.about_me %}{% set _ = filled.append(1) %}{% endif %}
+    {% if profile_user.university %}{% set _ = filled.append(1) %}{% endif %}
+    {% if profile_user.study_program %}{% set _ = filled.append(1) %}{% endif %}
+    {% if profile_user.languages %}{% set _ = filled.append(1) %}{% endif %}
+    {% if profile_user.interests %}{% set _ = filled.append(1) %}{% endif %}
+    {% if profile_user.profile_picture %}{% set _ = filled.append(1) %}{% endif %}
+    {% set pct = (filled|length / 6 * 100)|int %}
+    {% if pct < 100 %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:180px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                <span style="font-weight:700;font-size:0.95rem;">🧭 Profile Completion</span>
+                <span style="font-size:0.85rem;font-weight:700;color:var(--accent);">{{ pct }}%</span>
+            </div>
+            <div style="height:8px;border-radius:999px;background:rgba(255,255,255,0.08);overflow:hidden;">
+                <div style="height:100%;width:{{ pct }}%;border-radius:999px;background:linear-gradient(to right,var(--accent-dark),var(--accent));transition:width .6s ease;"></div>
+            </div>
+            <div style="margin-top:0.55rem;color:var(--muted);font-size:0.8rem;">
+                {% if not profile_user.profile_picture %}Add a profile photo · {% endif %}
+                {% if not profile_user.university %}Add your university · {% endif %}
+                {% if not profile_user.about_me %}Write a bio · {% endif %}
+                {% if not profile_user.languages %}Add languages · {% endif %}
+                {% if not profile_user.interests %}Add interests{% endif %}
+            </div>
+        </div>
+        <a href="/profile/edit" class="btn btn-primary btn-sm" style="flex-shrink:0;">Complete Profile →</a>
+    </div>
+    {% endif %}
+    {% endif %}
+
     <div class="profile-layout">
         <div class="profile-card">
             <div class="profile-avatar-wrap">

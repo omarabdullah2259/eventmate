@@ -189,6 +189,12 @@ class EventJoin(db.Model):
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
 
 
+class Bookmark(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+
+
 class ChatMessage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
@@ -347,6 +353,16 @@ def index():
     total_filtered = query.count()
     events = query.order_by(Event.date).limit(PER_PAGE).all()
     joined_event_ids = [ej.event_id for ej in user.joined_events] if user else []
+    bookmarked_ids = [b.event_id for b in Bookmark.query.filter_by(user_id=user.id).all()] if user else []
+
+    trending = (
+        db.session.query(Event, db.func.count(EventJoin.id).label('cnt'))
+        .join(EventJoin, EventJoin.event_id == Event.id, isouter=True)
+        .group_by(Event.id)
+        .order_by(db.desc('cnt'))
+        .limit(5)
+        .all()
+    )
 
     return render_template(
         'index.html',
@@ -354,6 +370,7 @@ def index():
         user=user.to_dict() if user else None,
         guest=guest,
         joined_events=joined_event_ids,
+        bookmarked_ids=bookmarked_ids,
         categories=CATEGORIES,
         category_icons=CATEGORY_ICONS,
         active_q=q,
@@ -365,6 +382,7 @@ def index():
         total_filtered=total_filtered,
         has_more=total_filtered > PER_PAGE,
         per_page=PER_PAGE,
+        trending=[e.to_dict() for e, _ in trending],
     )
 
 
@@ -451,6 +469,10 @@ def event_detail(event_id):
     organizer = User.query.get(event.organizer_id) if event.organizer_id else None
     is_organizer = bool(user and organizer and user.id == organizer.id)
 
+    bookmarked = False
+    if user:
+        bookmarked = Bookmark.query.filter_by(user_id=user.id, event_id=event_id).first() is not None
+
     return render_template(
         'event_detail.html',
         event=event.to_dict(),
@@ -460,6 +482,7 @@ def event_detail(event_id):
         attendees=attendees,
         organizer=organizer,
         is_organizer=is_organizer,
+        bookmarked=bookmarked,
     )
 
 
@@ -494,6 +517,63 @@ def unjoin_event(event_id):
 @app.route('/find_people/<int:event_id>')
 def find_people(event_id):
     return redirect(url_for('event_detail', event_id=event_id))
+
+
+@app.route('/bookmark/<int:event_id>', methods=['POST'])
+def bookmark_event(event_id):
+    user = get_current_user()
+    if not user:
+        return jsonify({'ok': False, 'error': 'login_required'}), 401
+    Event.query.get_or_404(event_id)
+    existing = Bookmark.query.filter_by(user_id=user.id, event_id=event_id).first()
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+        return jsonify({'ok': True, 'bookmarked': False})
+    db.session.add(Bookmark(user_id=user.id, event_id=event_id))
+    db.session.commit()
+    return jsonify({'ok': True, 'bookmarked': True})
+
+
+@app.route('/bookmarks')
+def bookmarks_page():
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    bms = Bookmark.query.filter_by(user_id=user.id).all()
+    events = [Event.query.get(b.event_id) for b in bms]
+    events = [e for e in events if e]
+    return render_template('bookmarks.html', events=[e.to_dict() for e in events])
+
+
+@app.route('/event/<int:event_id>/ics')
+def download_ics(event_id):
+    event = Event.query.get_or_404(event_id)
+    from datetime import datetime as dt
+    date_str = event.date.replace('-', '')
+    time_str = (event.time or '000000').replace(':', '') + '00'
+    dtstart = f'{date_str}T{time_str}'
+    uid = f'event-{event.id}@eventmate.app'
+    description = (event.description or '').replace('\n', '\\n')
+    ics = (
+        'BEGIN:VCALENDAR\r\n'
+        'VERSION:2.0\r\n'
+        'PRODID:-//EventMate//EN\r\n'
+        'BEGIN:VEVENT\r\n'
+        f'UID:{uid}\r\n'
+        f'DTSTART:{dtstart}\r\n'
+        f'SUMMARY:{event.title}\r\n'
+        f'LOCATION:{event.location}\r\n'
+        f'DESCRIPTION:{description}\r\n'
+        'END:VEVENT\r\n'
+        'END:VCALENDAR\r\n'
+    )
+    from flask import Response
+    return Response(
+        ics,
+        mimetype='text/calendar',
+        headers={'Content-Disposition': f'attachment; filename="event-{event.id}.ics"'},
+    )
 
 
 def _chat_message_to_dict(msg):

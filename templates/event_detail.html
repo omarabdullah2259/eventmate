@@ -96,14 +96,25 @@
         </div>
     </div>
 
-    {% if is_organizer %}
-    <div class="edit-actions" style="margin-bottom:1.2rem;">
-        <a href="/event/{{ event.id }}/edit" class="btn btn-ghost btn-sm">✏️ Edit Event</a>
-        <form method="post" action="/event/{{ event.id }}/delete" onsubmit="return confirm('Delete this event?')">
-            <button type="submit" class="btn btn-danger btn-sm">🗑 Delete</button>
-        </form>
+    <div class="edit-actions" style="margin-bottom:1.2rem;display:flex;gap:0.6rem;flex-wrap:wrap;">
+        {% if is_organizer %}
+            <a href="/event/{{ event.id }}/edit" class="btn btn-ghost btn-sm">✏️ Edit Event</a>
+            <form method="post" action="/event/{{ event.id }}/delete" onsubmit="return confirm('Delete this event?')">
+                <button type="submit" class="btn btn-danger btn-sm">🗑 Delete</button>
+            </form>
+        {% endif %}
+        <!-- Share button -->
+        <button class="btn btn-ghost btn-sm" onclick="shareEvent()">📤 Share</button>
+        <!-- Add to Calendar -->
+        <a href="/event/{{ event.id }}/ics" class="btn btn-ghost btn-sm">📅 Add to Calendar</a>
+        <!-- Bookmark -->
+        {% if user %}
+        <button class="btn btn-ghost btn-sm" id="bmBtn" onclick="toggleBookmark({{ event.id }})">
+            <span id="bmIcon">{{ '🔖' if bookmarked else '🤍' }}</span>
+            <span id="bmLabel">{{ 'Saved' if bookmarked else 'Save' }}</span>
+        </button>
+        {% endif %}
     </div>
-    {% endif %}
 
     <div class="detail-layout">
         <div>
@@ -224,6 +235,12 @@
                     {% endif %}
                 {% endif %}
 
+                <!-- Countdown timer -->
+                <div style="background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.18);border-radius:14px;padding:0.85rem 1rem;text-align:center;">
+                    <div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.3rem;">⏱️ Countdown</div>
+                    <div id="countdown" style="font-size:1.05rem;font-weight:800;color:var(--accent);letter-spacing:-.01em;">Loading…</div>
+                </div>
+
                 <a class="map-link" href="https://maps.google.com/?q={{ event.location | urlencode }}" target="_blank" rel="noopener">
                     📍 View on Google Maps
                 </a>
@@ -254,4 +271,48 @@
         </div>
     </div>
 </div>
+<script>
+/* ── Share ── */
+function shareEvent() {
+    const url = window.location.href;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => showToast('Link copied to clipboard!', '📤'));
+    } else {
+        const inp = document.createElement('input');
+        inp.value = url; document.body.appendChild(inp);
+        inp.select(); document.execCommand('copy');
+        document.body.removeChild(inp);
+        showToast('Link copied!', '📤');
+    }
+}
+
+/* ── Bookmark ── */
+async function toggleBookmark(id) {
+    const res  = await fetch(`/bookmark/${id}`, { method: 'POST' });
+    if (res.status === 401) { window.location.href = '/login'; return; }
+    const data = await res.json();
+    document.getElementById('bmIcon').textContent  = data.bookmarked ? '🔖' : '🤍';
+    document.getElementById('bmLabel').textContent = data.bookmarked ? 'Saved' : 'Save';
+    showToast(data.bookmarked ? 'Event saved!' : 'Removed from saved', data.bookmarked ? '🔖' : '');
+}
+
+/* ── Countdown ── */
+(function() {
+    const dateStr = '{{ event.date }}';
+    const timeStr = '{{ event.time or "00:00" }}';
+    const el = document.getElementById('countdown');
+    if (!el) return;
+    const target = new Date(`${dateStr}T${timeStr}:00`);
+    function tick() {
+        const diff = target - Date.now();
+        if (diff <= 0) { el.textContent = 'Event started!'; return; }
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        el.textContent = d > 0 ? `Starts in ${d}d ${h}h ${m}m` : `Starts in ${h}h ${m}m ${s}s`;
+    }
+    tick(); setInterval(tick, 1000);
+})();
+</script>
 {% endblock %}

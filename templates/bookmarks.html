@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Saved Events — EventMate{% endblock %}
+{% block body %}
+<div class="page">
+    <div style="margin-bottom:1.5rem;">
+        <a href="/" style="color:var(--muted);text-decoration:none;font-size:0.9rem;">← Back to events</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.75rem;">
+        <span style="font-size:1.6rem;">🔖</span>
+        <div>
+            <h1 style="font-size:1.4rem;font-weight:800;">Saved Events</h1>
+            <p style="color:var(--muted);font-size:0.88rem;margin-top:0.2rem;">Events you've bookmarked for later</p>
+        </div>
+    </div>
+
+    {% if events %}
+    <div class="events-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.2rem;">
+        {% for event in events %}
+        <article style="background:var(--surface);border:1px solid var(--border);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 20px 60px rgba(0,0,0,.35)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+            <div style="height:110px;position:relative;">
+                {% if event.banner %}
+                    <img src="{{ url_for('static', filename='uploads/' + event.banner) }}" alt="{{ event.title }}" style="width:100%;height:100%;object-fit:cover;">
+                {% else %}
+                    <div style="width:100%;height:100%;background:{{ event.category_color }};"></div>
+                {% endif %}
+                <span style="position:absolute;top:0.6rem;left:0.6rem;background:rgba(0,0,0,0.45);backdrop-filter:blur(8px);border-radius:999px;padding:0.28rem 0.7rem;font-size:0.78rem;font-weight:600;color:#fff;">{{ event.category_icon }} {{ event.category }}</span>
+                <!-- Unbookmark button -->
+                <button onclick="removeBookmark({{ event.id }}, this.closest('article'))" style="position:absolute;top:0.6rem;right:0.6rem;background:rgba(0,0,0,0.5);border:none;border-radius:999px;padding:0.3rem 0.65rem;color:#fca5a5;font-size:0.82rem;cursor:pointer;font-weight:600;">✕ Remove</button>
+            </div>
+            <div style="padding:1.2rem;flex:1;display:flex;flex-direction:column;gap:0.75rem;">
+                <div style="font-size:1.05rem;font-weight:700;line-height:1.3;">{{ event.title }}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
+                    <span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.28rem 0.7rem;border-radius:999px;background:var(--surface2);color:var(--muted);font-size:0.78rem;">📅 {{ event.date }}</span>
+                    <span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.28rem 0.7rem;border-radius:999px;background:var(--surface2);color:var(--muted);font-size:0.78rem;">📍 {{ event.location }}</span>
+                </div>
+                <a href="/event/{{ event.id }}" class="btn btn-primary btn-sm" style="margin-top:auto;">View Event →</a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:4rem 2rem;color:var(--muted);">
+        <div style="font-size:3rem;margin-bottom:1rem;">🔖</div>
+        <h3 style="font-size:1.2rem;color:var(--text);margin-bottom:0.5rem;">No saved events yet</h3>
+        <p style="margin-bottom:1.5rem;">Tap the 🤍 Save button on any event to bookmark it here.</p>
+        <a href="/" class="btn btn-primary">Browse Events</a>
+    </div>
+    {% endif %}
+</div>
+<script>
+async function removeBookmark(id, card) {
+    const res  = await fetch(`/bookmark/${id}`, { method: 'POST' });
+    const data = await res.json();
+    if (!data.bookmarked) {
+        card.style.transition = 'opacity .3s, transform .3s';
+        card.style.opacity = '0'; card.style.transform = 'scale(.95)';
+        setTimeout(() => card.remove(), 320);
+        showToast('Removed from saved', '');
+        const grid = document.querySelector('.events-grid');
+        if (grid && grid.querySelectorAll('article').length === 1) {
+            setTimeout(() => location.reload(), 400);
+        }
+    }
+}
+</script>
+{% endblock %}
