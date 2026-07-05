@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}You're Invited — {{ event.title }} — EventMate{% endblock %}
+{% block head %}
+<style>
+    .invite-wrap { max-width: 520px; margin: 4rem auto; }
+    .invite-card { border-radius: 24px; overflow: hidden; }
+    .invite-banner { height: 180px; background: {{ event.category_color }}; position: relative; }
+    .invite-banner img { width: 100%; height: 100%; object-fit: cover; }
+    .invite-body { padding: 1.75rem 2rem; }
+    .invite-badge { display:inline-flex;align-items:center;gap:0.4rem;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);border-radius:999px;padding:0.25rem 0.8rem;font-size:0.78rem;font-weight:700;color:#a78bfa;margin-bottom:1rem; }
+    .invite-title { font-size:1.5rem; font-weight:800; letter-spacing:-0.03em; margin-bottom:1.2rem; }
+    .invite-meta { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1.5rem; }
+    .invite-meta-row { display:flex; align-items:center; gap:0.6rem; color:var(--muted); font-size:0.9rem; }
+    .invite-meta-row strong { color:var(--text); }
+    .invite-actions { display:flex; gap:0.75rem; flex-wrap:wrap; }
+    .invite-joined-msg { display:flex;align-items:center;gap:0.5rem;padding:0.8rem 1rem;border-radius:14px;background:rgba(74,222,128,.1);color:var(--green);font-weight:700;font-size:0.95rem; }
+</style>
+{% endblock %}
+{% block body %}
+<div class="page">
+    <div class="invite-wrap">
+        <div style="text-align:center;margin-bottom:1.5rem;">
+            <div style="font-size:2rem;margin-bottom:0.4rem;">🎉</div>
+            <h2 style="font-size:1.1rem;font-weight:700;color:var(--muted);">You've been invited to an event</h2>
+        </div>
+
+        <div class="card invite-card">
+            <div class="invite-banner">
+                {% if event.banner %}
+                    <img src="{{ url_for('static', filename='uploads/' + event.banner) }}" alt="{{ event.title }}">
+                {% endif %}
+            </div>
+            <div class="invite-body">
+                <div class="invite-badge">🔒 Private Event</div>
+                <div class="invite-title">{{ event.title }}</div>
+
+                <div class="invite-meta">
+                    <div class="invite-meta-row">
+                        <span>📅</span>
+                        <span><strong>{{ event.date }}</strong>{% if event.time %} at <strong>{{ event.time }}</strong>{% endif %}</span>
+                    </div>
+                    <div class="invite-meta-row">
+                        <span>📍</span>
+                        <span><strong>{{ event.location }}</strong></span>
+                    </div>
+                    {% if event.category %}
+                    <div class="invite-meta-row">
+                        <span>{{ event.category_icon }}</span>
+                        <span>{{ event.category }}</span>
+                    </div>
+                    {% endif %}
+                    {% if event.language %}
+                    <div class="invite-meta-row">
+                        <span>🗣️</span>
+                        <span>{{ event.language }}</span>
+                    </div>
+                    {% endif %}
+                    {% if event.max_participants %}
+                    <div class="invite-meta-row">
+                        <span>👥</span>
+                        <span>{{ event.attendee_count }} / {{ event.max_participants }} attending</span>
+                    </div>
+                    {% else %}
+                    <div class="invite-meta-row">
+                        <span>👥</span>
+                        <span>{{ event.attendee_count }} attending</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if event.description %}
+                <p style="color:var(--muted);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">{{ event.description[:200] }}{% if event.description|length > 200 %}…{% endif %}</p>
+                {% endif %}
+
+                <div class="invite-actions">
+                    {% if joined %}
+                        <div class="invite-joined-msg">✓ You're attending this event</div>
+                        <a href="/event/{{ event.id }}" class="btn btn-ghost" style="flex:1;text-align:center;">View Event</a>
+                    {% elif guest %}
+                        <a href="/login" class="btn btn-primary" style="flex:1;text-align:center;">Log in to Join</a>
+                    {% elif not user %}
+                        <a href="/login" class="btn btn-primary" style="flex:1;text-align:center;">Log in to Join</a>
+                    {% elif event.max_participants and event.attendee_count >= event.max_participants %}
+                        <div style="color:var(--muted);font-size:0.9rem;padding:0.75rem 0;">This event is full.</div>
+                        <a href="/event/{{ event.id }}" class="btn btn-ghost" style="flex:1;text-align:center;">View Event</a>
+                    {% else %}
+                        <form method="post" action="/event/invite/{{ code }}/join" style="flex:1;">
+                            <button type="submit" class="btn btn-green" style="width:100%;">🎉 Accept &amp; Join</button>
+                        </form>
+                        <a href="/event/{{ event.id }}" class="btn btn-ghost">View Event</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <p style="text-align:center;color:var(--muted);font-size:0.8rem;margin-top:1.25rem;">
+            Powered by <a href="/" style="color:var(--accent);text-decoration:none;">EventMate</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

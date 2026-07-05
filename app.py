@@ -1,8 +1,10 @@
+import atexit
 import os
 import uuid
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, render_template, redirect, url_for, session, request, jsonify
+from apscheduler.schedulers.background import BackgroundScheduler
 from flask_sqlalchemy import SQLAlchemy
 from authlib.integrations.flask_client import OAuth
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -155,6 +157,8 @@ class Event(db.Model):
     max_participants = db.Column(db.Integer)
     banner = db.Column(db.String(200))
     organizer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    is_private = db.Column(db.Boolean, default=False, nullable=False)
+    invite_code = db.Column(db.String(16), unique=True, nullable=True)
     joined_users = db.relationship('EventJoin', backref='event', lazy=True, cascade='all, delete-orphan')
 
     def attendee_count(self):
@@ -180,6 +184,8 @@ class Event(db.Model):
             'attendees': [ej.user.name for ej in self.joined_users],
             'category_color': CATEGORY_COLORS.get(self.category, 'linear-gradient(135deg,#1e3a8a,#3b82f6)'),
             'category_icon': CATEGORY_ICONS.get(self.category, '📅'),
+            'is_private': bool(self.is_private),
+            'invite_code': self.invite_code,
         }
 
 
@@ -187,6 +193,7 @@ class EventJoin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey('event.id'), nullable=False)
+    reminder_sent = db.Column(db.Boolean, default=False, nullable=False)
 
 
 class Bookmark(db.Model):
@@ -226,6 +233,19 @@ class ChatMessage(db.Model):
 def init_db():
     with app.app_context():
         db.create_all()
+        # Add new columns to existing databases (idempotent migrations)
+        with db.engine.connect() as conn:
+            from sqlalchemy import text
+            for col, ddl in [
+                ('event', 'ALTER TABLE event ADD COLUMN is_private BOOLEAN NOT NULL DEFAULT 0'),
+                ('event', 'ALTER TABLE event ADD COLUMN invite_code VARCHAR(16)'),
+                ('event_join', 'ALTER TABLE event_join ADD COLUMN reminder_sent BOOLEAN NOT NULL DEFAULT 0'),
+            ]:
+                try:
+                    conn.execute(text(ddl))
+                    conn.commit()
+                except Exception:
+                    pass  # column already exists
         if Event.query.first() is None:
             seed_events = [
                 {
@@ -359,8 +379,19 @@ def index():
     active_language = request.args.get('language', '').strip()
     active_date_range = request.args.get('date_range', '').strip()
 
+    joined_event_ids = [ej.event_id for ej in user.joined_events] if user else []
+    bookmarked_ids = [b.event_id for b in Bookmark.query.filter_by(user_id=user.id).all()] if user else []
+
     today = datetime.utcnow().date()
     query = Event.query
+    # Hide private events from users who aren't the organizer or a joined member
+    if user:
+        privacy_conds = [Event.is_private == False, Event.organizer_id == user.id]
+        if joined_event_ids:
+            privacy_conds.append(Event.id.in_(joined_event_ids))
+        query = query.filter(db.or_(*privacy_conds))
+    else:
+        query = query.filter(Event.is_private == False)
     if q:
         query = query.filter(Event.title.ilike(f'%{q}%'))
     if active_category:
@@ -383,8 +414,6 @@ def index():
     PER_PAGE = 24
     total_filtered = query.count()
     events = query.order_by(Event.date).limit(PER_PAGE).all()
-    joined_event_ids = [ej.event_id for ej in user.joined_events] if user else []
-    bookmarked_ids = [b.event_id for b in Bookmark.query.filter_by(user_id=user.id).all()] if user else []
 
     trending = (
         db.session.query(Event, db.func.count(EventJoin.id).label('cnt'))
@@ -434,6 +463,14 @@ def events_more():
 
     today = datetime.utcnow().date()
     query = Event.query
+    # Privacy filter
+    if user:
+        privacy_conds = [Event.is_private == False, Event.organizer_id == user.id]
+        if joined_ids:
+            privacy_conds.append(Event.id.in_(joined_ids))
+        query = query.filter(db.or_(*privacy_conds))
+    else:
+        query = query.filter(Event.is_private == False)
     if q:
         query = query.filter(Event.title.ilike(f'%{q}%'))
     if cat:
@@ -473,6 +510,15 @@ def event_detail(event_id):
     event = Event.query.get_or_404(event_id)
     user = get_current_user()
     guest = session.get('guest')
+
+    # Block access to private events for non-organizer, non-joined users
+    if event.is_private:
+        is_joined = user and EventJoin.query.filter_by(user_id=user.id, event_id=event_id).first()
+        is_org = user and event.organizer_id == user.id
+        if not is_joined and not is_org:
+            return render_template('404.html', code=403,
+                title='Private Event',
+                message='This event is invite-only. Ask the organizer for the invite link.'), 403
 
     joined = False
     if user:
@@ -520,6 +566,10 @@ def event_detail(event_id):
     avg_rating = round(sum(r.rating for r in reviews) / len(reviews), 1) if reviews else None
     user_reviewed = bool(user and Review.query.filter_by(user_id=user.id, event_id=event_id).first())
 
+    invite_url = None
+    if is_organizer and event.invite_code:
+        invite_url = request.host_url.rstrip('/') + f'/event/invite/{event.invite_code}'
+
     return render_template(
         'event_detail.html',
         event=event.to_dict(),
@@ -530,6 +580,7 @@ def event_detail(event_id):
         organizer=organizer,
         is_organizer=is_organizer,
         bookmarked=bookmarked,
+        invite_url=invite_url,
         reviews=[{
             'id': r.id, 'rating': r.rating, 'comment': r.comment,
             'author_name': r.author.name if r.author else 'Unknown',
@@ -872,6 +923,8 @@ def create_event():
         else:
             mp_raw = request.form.get('max_participants', '').strip()
             banner = save_upload('banner')
+            is_private = request.form.get('is_private') == 'on'
+            invite_code = uuid.uuid4().hex[:12] if is_private else None
             event = Event(
                 title=title,
                 date=date,
@@ -883,6 +936,8 @@ def create_event():
                 max_participants=int(mp_raw) if mp_raw.isdigit() else None,
                 banner=banner,
                 organizer_id=user.id,
+                is_private=is_private,
+                invite_code=invite_code,
             )
             db.session.add(event)
             db.session.commit()
@@ -911,6 +966,12 @@ def edit_event(event_id):
         new_banner = save_upload('banner')
         if new_banner:
             event.banner = new_banner
+        was_private = bool(event.is_private)
+        event.is_private = request.form.get('is_private') == 'on'
+        if event.is_private and not event.invite_code:
+            event.invite_code = uuid.uuid4().hex[:12]
+        elif not event.is_private:
+            event.invite_code = None
         db.session.commit()
         return redirect(url_for('dashboard'))
     return render_template('create_event.html', user=user.to_dict(), event=event.to_dict(), categories=CATEGORIES, editing=True, error=error)
@@ -1109,6 +1170,69 @@ def about():
             sent = True
             form = {}
     return render_template('about.html', sent=sent, error=error, form=form)
+
+
+@app.route('/event/invite/<code>')
+@auth_required
+def event_invite(code):
+    event = Event.query.filter_by(invite_code=code).first_or_404()
+    user = get_current_user()
+    guest = session.get('guest')
+    joined = bool(user and EventJoin.query.filter_by(user_id=user.id, event_id=event.id).first())
+    return render_template('invite.html', event=event.to_dict(), user=user.to_dict() if user else None,
+                           guest=guest, joined=joined, code=code)
+
+
+@app.route('/event/invite/<code>/join', methods=['POST'])
+@login_required
+def event_invite_join(code):
+    event = Event.query.filter_by(invite_code=code).first_or_404()
+    user = get_current_user()
+    existing = EventJoin.query.filter_by(user_id=user.id, event_id=event.id).first()
+    if not existing:
+        if event.max_participants is None or event.attendee_count() < event.max_participants:
+            db.session.add(EventJoin(user_id=user.id, event_id=event.id))
+            if event.organizer_id and event.organizer_id != user.id:
+                _push_notification(
+                    event.organizer_id,
+                    f'🎉 {user.name} joined your private event "{event.title}"',
+                    link=f'/event/{event.id}',
+                )
+            db.session.commit()
+    return redirect(url_for('event_detail', event_id=event.id))
+
+
+# ── Event Reminders (24-hour notice) ─────────────────────────────────────────
+
+def send_reminders():
+    """Notify joined members about events happening tomorrow."""
+    with app.app_context():
+        tomorrow = str((datetime.utcnow() + timedelta(days=1)).date())
+        events = Event.query.filter_by(date=tomorrow).all()
+        notified = 0
+        for event in events:
+            joins = EventJoin.query.filter_by(event_id=event.id, reminder_sent=False).all()
+            for join in joins:
+                time_str = f' at {event.time}' if event.time else ''
+                _push_notification(
+                    join.user_id,
+                    f'⏰ Reminder: "{event.title}" is tomorrow{time_str}! 📍 {event.location}',
+                    link=f'/event/{event.id}',
+                )
+                join.reminder_sent = True
+                notified += 1
+            if joins:
+                db.session.commit()
+        return notified
+
+
+# Start background scheduler (once — avoid double-start with Flask reloader)
+if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    _scheduler = BackgroundScheduler(daemon=True)
+    _scheduler.add_job(send_reminders, 'cron', hour=8, minute=0, id='daily_reminders',
+                       misfire_grace_time=3600)
+    _scheduler.start()
+    atexit.register(lambda: _scheduler.shutdown(wait=False))
 
 
 init_db()

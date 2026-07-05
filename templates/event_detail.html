@@ -96,6 +96,12 @@
         </div>
     </div>
 
+    {% if event.is_private %}
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);border-radius:999px;padding:0.3rem 0.9rem;font-size:0.82rem;font-weight:700;color:#a78bfa;margin-bottom:1rem;">
+        🔒 Private Event — Invite Only
+    </div>
+    {% endif %}
+
     <div class="edit-actions" style="margin-bottom:1.2rem;display:flex;gap:0.6rem;flex-wrap:wrap;">
         {% if is_organizer %}
             <a href="/event/{{ event.id }}/edit" class="btn btn-ghost btn-sm">✏️ Edit Event</a>
@@ -115,6 +121,17 @@
         </button>
         {% endif %}
     </div>
+
+    {% if is_organizer and invite_url %}
+    <div style="background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:18px;padding:1rem 1.25rem;margin-bottom:1.5rem;">
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.5rem;">🔗 Invite Link</div>
+        <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+            <code id="inviteLink" style="flex:1;font-size:0.78rem;color:var(--accent);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:0.4rem 0.75rem;word-break:break-all;">{{ invite_url }}</code>
+            <button onclick="copyInviteLink()" class="btn btn-primary btn-sm" style="flex-shrink:0;">📋 Copy</button>
+        </div>
+        <p style="color:var(--muted);font-size:0.78rem;margin-top:0.5rem;">Share this link with people you want to invite. Only those with it can join.</p>
+    </div>
+    {% endif %}
 
     <div class="detail-layout">
         <div>
@@ -368,6 +385,12 @@ async function submitReview(eventId) {
             ${r.comment ? `<p style="color:var(--muted);font-size:0.88rem;line-height:1.65;">${r.comment}</p>` : ''}
         </div>`);
     showToast('Review submitted!', '⭐');
+}
+
+/* ── Copy invite link ── */
+function copyInviteLink() {
+    const link = document.getElementById('inviteLink').textContent.trim();
+    navigator.clipboard.writeText(link).then(() => showToast('Invite link copied!', '🔗'));
 }
 
 /* ── Share ── */

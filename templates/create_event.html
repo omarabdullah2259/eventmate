@@ -99,6 +99,26 @@
                     </div>
                 </div>
 
+                <hr class="section-divider">
+
+                <!-- Privacy toggle -->
+                <div style="display:flex;align-items:flex-start;gap:1rem;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:1.1rem 1.25rem;">
+                    <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;margin-top:2px;">
+                        <input type="checkbox" name="is_private" id="isPrivateToggle" style="opacity:0;width:0;height:0;"
+                            {{ 'checked' if event and event.is_private }}
+                            onchange="document.getElementById('privateHint').style.display=this.checked?'block':'none'">
+                        <span style="position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:999px;transition:.25s;"
+                              id="toggleTrack"></span>
+                    </label>
+                    <div>
+                        <div style="font-weight:700;font-size:0.95rem;">🔒 Private Event</div>
+                        <div style="color:var(--muted);font-size:0.85rem;margin-top:0.2rem;">Only people with the invite link can discover and join this event.</div>
+                        <div id="privateHint" style="display:{{ 'block' if event and event.is_private else 'none' }};margin-top:0.5rem;padding:0.5rem 0.75rem;background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);border-radius:10px;font-size:0.82rem;color:var(--accent);">
+                            🔗 An invite link will be generated after saving. Share it from the event page.
+                        </div>
+                    </div>
+                </div>
+
                 <div style="display:flex;gap:0.75rem;justify-content:flex-end;flex-wrap:wrap;">
                     <a href="/dashboard" class="btn btn-ghost">Cancel</a>
                     <button type="submit" class="btn btn-primary">{% if editing %}Save Changes{% else %}Create Event{% endif %}</button>
@@ -108,6 +128,13 @@
     </div>
 </div>
 <script>
+/* Toggle track colour */
+const tog = document.getElementById('isPrivateToggle');
+const track = document.getElementById('toggleTrack');
+function syncToggle() { track.style.background = tog.checked ? 'var(--accent)' : 'var(--border)'; }
+tog.addEventListener('change', syncToggle);
+syncToggle();
+
 function previewBanner(input) {
     const preview = document.getElementById('bannerPreview');
     const img = document.getElementById('bannerImg');
