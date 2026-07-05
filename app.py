@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, render_template, redirect, url_for, session, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -357,7 +357,9 @@ def index():
     active_category = request.args.get('category', '').strip()
     active_city = request.args.get('city', '').strip()
     active_language = request.args.get('language', '').strip()
+    active_date_range = request.args.get('date_range', '').strip()
 
+    today = datetime.utcnow().date()
     query = Event.query
     if q:
         query = query.filter(Event.title.ilike(f'%{q}%'))
@@ -367,6 +369,16 @@ def index():
         query = query.filter(Event.location.ilike(f'%{active_city}%'))
     if active_language:
         query = query.filter(Event.language.ilike(f'%{active_language}%'))
+    if active_date_range == 'today':
+        query = query.filter(Event.date == str(today))
+    elif active_date_range == 'week':
+        week_end = str(today + timedelta(days=7))
+        query = query.filter(Event.date >= str(today), Event.date <= week_end)
+    elif active_date_range == 'month':
+        month_end = str(today + timedelta(days=30))
+        query = query.filter(Event.date >= str(today), Event.date <= month_end)
+    elif active_date_range == 'upcoming':
+        query = query.filter(Event.date >= str(today))
 
     PER_PAGE = 24
     total_filtered = query.count()
@@ -396,6 +408,7 @@ def index():
         active_category=active_category,
         active_city=active_city,
         active_language=active_language,
+        active_date_range=active_date_range,
         total_events=Event.query.count(),
         total_users=User.query.count(),
         total_filtered=total_filtered,
@@ -408,16 +421,18 @@ def index():
 @app.route('/events/more')
 def events_more():
     PER_PAGE = 24
-    page   = request.args.get('page', 1, type=int)
-    q      = request.args.get('q', '').strip()
-    cat    = request.args.get('category', '').strip()
-    city   = request.args.get('city', '').strip()
-    lang   = request.args.get('language', '').strip()
+    page       = request.args.get('page', 1, type=int)
+    q          = request.args.get('q', '').strip()
+    cat        = request.args.get('category', '').strip()
+    city       = request.args.get('city', '').strip()
+    lang       = request.args.get('language', '').strip()
+    date_range = request.args.get('date_range', '').strip()
 
     user  = get_current_user()
     guest = session.get('guest')
     joined_ids = [ej.event_id for ej in user.joined_events] if user else []
 
+    today = datetime.utcnow().date()
     query = Event.query
     if q:
         query = query.filter(Event.title.ilike(f'%{q}%'))
@@ -427,6 +442,14 @@ def events_more():
         query = query.filter(Event.location.ilike(f'%{city}%'))
     if lang:
         query = query.filter(Event.language.ilike(f'%{lang}%'))
+    if date_range == 'today':
+        query = query.filter(Event.date == str(today))
+    elif date_range == 'week':
+        query = query.filter(Event.date >= str(today), Event.date <= str(today + timedelta(days=7)))
+    elif date_range == 'month':
+        query = query.filter(Event.date >= str(today), Event.date <= str(today + timedelta(days=30)))
+    elif date_range == 'upcoming':
+        query = query.filter(Event.date >= str(today))
 
     total   = query.count()
     offset  = (page - 1) * PER_PAGE

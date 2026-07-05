@@ -136,18 +136,33 @@
                 <div class="filter-row">
                     <input class="filter-input" type="text" name="city" placeholder="📍 City..." value="{{ active_city }}" style="width:160px">
                     <input class="filter-input" type="text" name="language" placeholder="🗣️ Language..." value="{{ active_language }}" style="width:180px">
-                    {% if active_q or active_category or active_city or active_language %}
+                    {% if active_q or active_category or active_city or active_language or active_date_range %}
                         <a href="/" class="clear-link">✕ Clear filters</a>
                     {% endif %}
                 </div>
+                <input type="hidden" name="date_range" id="dateRangeInput" value="{{ active_date_range }}">
             </div>
         </form>
         <div class="cat-scroll">
-            <a class="cat-chip {{ 'active' if not active_category }}" href="/?{% if active_q %}q={{ active_q }}&{% endif %}{% if active_city %}city={{ active_city }}&{% endif %}{% if active_language %}language={{ active_language }}{% endif %}">All</a>
+            <a class="cat-chip {{ 'active' if not active_category }}" href="/?{% if active_q %}q={{ active_q }}&{% endif %}{% if active_city %}city={{ active_city }}&{% endif %}{% if active_language %}language={{ active_language }}&{% endif %}{% if active_date_range %}date_range={{ active_date_range }}{% endif %}">All</a>
             {% for cat in categories %}
             <a class="cat-chip {{ 'active' if active_category == cat }}"
-               href="/?category={{ cat }}{% if active_q %}&q={{ active_q }}{% endif %}{% if active_city %}&city={{ active_city }}{% endif %}{% if active_language %}&language={{ active_language }}{% endif %}">
+               href="/?category={{ cat }}{% if active_q %}&q={{ active_q }}{% endif %}{% if active_city %}&city={{ active_city }}{% endif %}{% if active_language %}&language={{ active_language }}{% endif %}{% if active_date_range %}&date_range={{ active_date_range }}{% endif %}">
                 {{ category_icons[cat] }} {{ cat }}
+            </a>
+            {% endfor %}
+        </div>
+
+        <!-- 📅 Date range filter pills -->
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.75rem;padding:0 0.25rem;">
+            {% set dr_base = '?' ~ ('q=' ~ active_q ~ '&' if active_q) ~ ('category=' ~ active_category ~ '&' if active_category) ~ ('city=' ~ active_city ~ '&' if active_city) ~ ('language=' ~ active_language ~ '&' if active_language) %}
+            {% set date_options = [('', '📅 All Dates'), ('today', '🌅 Today'), ('week', '📆 This Week'), ('month', '🗓️ This Month'), ('upcoming', '🚀 Upcoming')] %}
+            {% for val, label in date_options %}
+            <a href="{{ dr_base }}{% if val %}date_range={{ val }}{% endif %}"
+               style="padding:0.35rem 0.85rem;border-radius:999px;font-size:0.82rem;font-weight:600;text-decoration:none;border:1px solid {{ 'var(--accent)' if active_date_range == val else 'var(--border)' }};background:{{ 'rgba(96,165,250,0.15)' if active_date_range == val else 'var(--surface)' }};color:{{ 'var(--accent)' if active_date_range == val else 'var(--muted)' }};transition:all .15s;white-space:nowrap;"
+               onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+               onmouseout="this.style.borderColor='{{ 'var(--accent)' if active_date_range == val else 'var(--border)' }}';this.style.color='{{ 'var(--accent)' if active_date_range == val else 'var(--muted)' }}'">
+                {{ label }}
             </a>
             {% endfor %}
         </div>
@@ -274,10 +289,11 @@ let   currentPage = 1;
 let   loading     = false;
 
 const params = {
-    q:        {{ active_q | tojson }},
-    category: {{ active_category | tojson }},
-    city:     {{ active_city | tojson }},
-    language: {{ active_language | tojson }},
+    q:          {{ active_q | tojson }},
+    category:   {{ active_category | tojson }},
+    city:       {{ active_city | tojson }},
+    language:   {{ active_language | tojson }},
+    date_range: {{ active_date_range | tojson }},
 };
 
 function esc(s) {
@@ -354,11 +370,12 @@ async function loadMore() {
     btn.disabled = true;
 
     const qs = new URLSearchParams({
-        page: currentPage + 1,
-        q:    params.q,
-        category: params.category,
-        city:     params.city,
-        language: params.language,
+        page:       currentPage + 1,
+        q:          params.q,
+        category:   params.category,
+        city:       params.city,
+        language:   params.language,
+        date_range: params.date_range,
     });
 
     try {
