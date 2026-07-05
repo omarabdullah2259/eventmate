@@ -274,10 +274,10 @@ let   currentPage = 1;
 let   loading     = false;
 
 const params = {
-    q:        {{ ('"' ~ active_q ~ '"') if active_q else '""' }},
-    category: {{ ('"' ~ active_category ~ '"') if active_category else '""' }},
-    city:     {{ ('"' ~ active_city ~ '"') if active_city else '""' }},
-    language: {{ ('"' ~ active_language ~ '"') if active_language else '""' }},
+    q:        {{ active_q | tojson }},
+    category: {{ active_category | tojson }},
+    city:     {{ active_city | tojson }},
+    language: {{ active_language | tojson }},
 };
 
 function esc(s) {
