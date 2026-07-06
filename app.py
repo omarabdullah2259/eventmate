@@ -1,10 +1,8 @@
-import atexit
 import os
 import uuid
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, render_template, redirect, url_for, session, request, jsonify
-from apscheduler.schedulers.background import BackgroundScheduler
 from flask_sqlalchemy import SQLAlchemy
 from authlib.integrations.flask_client import OAuth
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -1224,16 +1222,6 @@ def send_reminders():
             if joins:
                 db.session.commit()
         return notified
-
-
-# Start background scheduler (once — avoid double-start with Flask reloader)
-if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-    _scheduler = BackgroundScheduler(daemon=True)
-    _scheduler.add_job(send_reminders, 'cron', hour=8, minute=0, id='daily_reminders',
-                       misfire_grace_time=3600)
-    _scheduler.start()
-    atexit.register(lambda: _scheduler.shutdown(wait=False))
-
 
 init_db()
 
